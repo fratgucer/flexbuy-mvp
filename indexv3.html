@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlexBuy — Buy local, pay over time</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--g:#00c853;--gl:#e8faf0;--gd:#009624;--tx:#0a0a0a;--mu:#6b6b6b;--br:#e8e8e4;--sf:#f5f5f0;}
+body{font-family:'Inter',system-ui;color:var(--tx);background:#fff;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{background:#fff;border-bottom:1px solid var(--br);padding:0 16px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:50;}
+.logo{font-size:16px;font-weight:900;letter-spacing:-1px;cursor:pointer;user-select:none;}
+.logo span{color:var(--g);}
+.sw{position:relative;display:flex;align-items:center;gap:6px;}
+.sw-wrap{position:relative;display:flex;align-items:center;}
+.sw-wrap input{background:#fff;border:1px solid #d0d0cc;border-radius:7px;padding:6px 10px 6px 30px;font-size:11px;font-family:inherit;color:var(--tx);width:200px;outline:none;}
+.sw-wrap input:focus{border-color:var(--tx);}
+.sw-wrap input::placeholder{color:#c0bfbb;}
+.sw-ico{position:absolute;left:9px;font-size:11px;color:#c0bfbb;pointer-events:none;}
+.search-results{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--br);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:999;display:none;max-height:260px;overflow-y:auto;min-width:280px;}
+.search-results.show{display:block;}
+.sr-item{display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--br);}
+.sr-item:last-child{border-bottom:none;}
+.sr-item:hover{background:var(--sf);}
+.sr-em{font-size:18px;width:32px;height:32px;background:var(--sf);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sr-t{font-size:11px;font-weight:700;}
+.sr-p{font-size:10px;color:var(--gd);font-weight:600;}
+.sr-l{font-size:9px;color:var(--mu);}
+.sr-empty{padding:14px;text-align:center;font-size:12px;color:var(--mu);}
+.search-btn{background:var(--tx);color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;}
+.tbr{display:flex;gap:7px;align-items:center;}
+.btn-help{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-sell{background:none;border:1.5px solid var(--br);border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:inherit;}
+.btn-signin{background:var(--g);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.user-av{width:30px;height:30px;border-radius:50%;background:var(--g);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;}
+.user-av.show{display:flex;}
+.hbg{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:3px;margin-right:5px;}
+.hbg span{display:block;width:14px;height:1.5px;background:var(--tx);border-radius:2px;}
+
+/* ── BODY LAYOUT ── */
+.body{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sb{width:210px;background:#fff;border-right:1px solid var(--br);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s,opacity .2s;overflow:hidden;}
+.sb.closed{width:0;opacity:0;}
+.sbnav{padding:10px 8px;flex:1;overflow-y:auto;}
+.sbsec{font-size:9px;font-weight:700;color:var(--mu);letter-spacing:1px;text-transform:uppercase;padding:0 7px;margin:12px 0 4px;}
+.sbsec:first-child{margin-top:0;}
+.sbi{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:500;color:var(--mu);transition:all .15s;margin-bottom:1px;}
+.sbi:hover,.sbi.act{background:var(--sf);color:var(--tx);}
+.sbi.act{font-weight:600;}
+.sbi-ic{font-size:13px;width:16px;text-align:center;}
+.sbbdg{margin-left:auto;background:var(--g);color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:7px;}
+
+/* Category accordion in sidebar */
+.sb-cat{margin-bottom:1px;}
+.sb-cat-head{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:500;color:var(--mu);transition:all .15s;justify-content:space-between;}
+.sb-cat-head:hover{background:var(--sf);color:var(--tx);}
+.sb-cat-head.act{background:var(--sf);color:var(--tx);font-weight:600;}
+.sb-cat-head-left{display:flex;align-items:center;gap:8px;}
+.sb-cat-arrow{font-size:8px;color:var(--mu);transition:transform .18s;flex-shrink:0;}
+.sb-cat-arrow.open{transform:rotate(180deg);}
+.sb-cat-items{display:none;padding:2px 0 4px 28px;}
+.sb-cat-items.open{display:block;}
+.sb-cat-item{padding:5px 9px;font-size:10px;color:var(--mu);cursor:pointer;border-radius:5px;transition:background .1s;}
+.sb-cat-item:hover{background:var(--sf);color:var(--tx);}
+.sb-cat-item.act{color:var(--gd);font-weight:600;}
+
+.sbbot{padding:8px;border-top:1px solid var(--br);}
+.sellbtn{width:100%;background:var(--g);color:#fff;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ── SCREENS ── */
+.scr{flex:1;overflow-y:auto;display:none;flex-direction:column;}
+.scr.act{display:flex;}
+.login-scr{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--sf);}
+.login-scr.act{display:flex;}
+
+/* ── HOME ── */
+.pp{padding:18px;}
+.hero{background:var(--tx);border-radius:10px;padding:22px 26px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;right:-20px;top:-20px;width:110px;height:110px;background:var(--g);border-radius:50%;opacity:.12;}
+.hero h1{font-size:20px;font-weight:900;letter-spacing:-1px;color:#fff;line-height:1.1;margin-bottom:6px;}
+.hero h1 em{color:var(--g);font-style:normal;}
+.hero p{font-size:11px;color:rgba(255,255,255,.5);margin-bottom:12px;}
+.hero-btns{display:flex;gap:6px;}
+.hbp{background:var(--g);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.hbg2{background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;}
+.pills{display:flex;flex-direction:column;gap:4px;z-index:1;}
+.pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:3px 10px;font-size:9px;font-weight:600;color:rgba(255,255,255,.65);white-space:nowrap;cursor:pointer;}
+.pill:hover{background:rgba(255,255,255,.15);}
+.pill b{color:var(--g);}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.stat{background:var(--sf);border-radius:8px;padding:12px;}
+.stl{font-size:9px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.stv{font-size:18px;font-weight:900;letter-spacing:-.5px;}
+.stv.g{color:var(--gd);}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sht{font-size:13px;font-weight:700;}
+.sha{font-size:10px;font-weight:600;color:var(--mu);background:none;border:none;cursor:pointer;font-family:inherit;}
+.cats{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.cat{background:#fff;border:1.5px solid var(--br);border-radius:5px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;color:var(--mu);transition:all .15s;white-space:nowrap;}
+.cat.act{background:var(--tx);color:#fff;border-color:var(--tx);}
+.cat:hover:not(.act){border-color:var(--tx);color:var(--tx);}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.card{background:#fff;border:1px solid var(--br);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .15s;}
+.card:hover{border-color:var(--tx);transform:translateY(-1px);}
+.cimg{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:38px;background:var(--sf);position:relative;}
+.bt{position:absolute;top:5px;right:5px;background:var(--g);color:#fff;font-size:8px;font-weight:800;padding:2px 5px;border-radius:3px;}
+.save-btn-card{position:absolute;top:5px;left:5px;background:rgba(255,255,255,.85);border:none;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;}
+.cbody{padding:10px;}
+.ct{font-size:11px;font-weight:600;margin-bottom:2px;line-height:1.3;}
+.cl{font-size:9px;color:var(--mu);margin-bottom:6px;}
+.cp{font-size:15px;font-weight:800;letter-spacing:-.5px;}
+.cm{font-size:9px;color:var(--gd);font-weight:500;margin-top:2px;}
+
+/* ── SAVED PAGE ── */
+.saved-page{padding:18px;}
+.saved-empty{text-align:center;padding:60px 20px;}
+.saved-empty-icon{font-size:48px;margin-bottom:12px;}
+.saved-empty-t{font-size:16px;font-weight:700;margin-bottom:6px;}
+.saved-empty-s{font-size:12px;color:var(--mu);margin-bottom:20px;}
+.saved-browse-btn{background:var(--tx);color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ── LOGIN ── */
+.login-box{background:#fff;border-radius:14px;width:100%;max-width:360px;padding:28px;border:1px solid var(--br);}
+.login-logo{font-size:18px;font-weight:900;letter-spacing:-1px;margin-bottom:2px;}
+.login-logo span{color:var(--g);}
+.login-sub{font-size:12px;color:var(--mu);margin-bottom:20px;}
+.login-tabs{display:flex;margin-bottom:20px;border:1px solid var(--br);border-radius:8px;overflow:hidden;}
+.login-tab{flex:1;padding:9px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;color:var(--mu);background:#fff;border:none;font-family:inherit;}
+.login-tab.act{background:var(--tx);color:#fff;}
+.form-block{display:none;}
+.form-block.act{display:block;}
+.gb{width:100%;border:1.5px solid var(--br);border-radius:7px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#fff;color:var(--tx);display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:9px;}
+.ab{width:100%;border:1.5px solid var(--br);border-radius:7px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:12px;}
+.dv{display:flex;align-items:center;gap:8px;margin:10px 0;color:var(--mu);font-size:11px;}
+.dv::before,.dv::after{content:'';flex:1;height:1px;background:var(--br);}
+.fl{font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;display:block;}
+.fi{width:100%;border:1.5px solid var(--br);border-radius:7px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;color:var(--tx);margin-bottom:12px;background:#fff;}
+.fi:focus{border-color:var(--tx);}
+.login-btn{width:100%;background:var(--tx);color:#fff;border:none;border-radius:7px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.login-forgot{font-size:11px;color:var(--mu);text-align:center;margin-top:10px;cursor:pointer;text-decoration:underline;}
+.login-forgot:hover{color:var(--tx);}
+.login-terms{font-size:9px;color:var(--mu);text-align:center;margin-top:12px;line-height:1.6;}
+.login-terms a{color:var(--tx);cursor:pointer;text-decoration:underline;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+/* forgot password panel */
+.forgot-panel{display:none;}
+.forgot-panel.act{display:block;}
+.back-link{font-size:11px;color:var(--mu);cursor:pointer;text-decoration:underline;display:inline-block;margin-bottom:14px;}
+.back-link:hover{color:var(--tx);}
+
+/* ── BNPL INFO ── */
+.bnpl-page{padding:20px;overflow-y:auto;flex:1;}
+.bnpl-hero{border-radius:12px;padding:24px;margin-bottom:20px;}
+.bnpl-hero.affirm{background:#000;}
+.bnpl-hero.klarna{background:#ff8fb1;}
+.bnpl-hero.afterpay{background:#b2fce4;}
+.bnpl-logo-big{font-size:24px;font-weight:900;letter-spacing:.5px;margin-bottom:8px;}
+.affirm .bnpl-logo-big{color:#60d7a9;}
+.klarna .bnpl-logo-big,.afterpay .bnpl-logo-big{color:rgba(0,0,0,.8);}
+.bnpl-tagline{font-size:14px;font-weight:700;margin-bottom:4px;}
+.affirm .bnpl-tagline{color:#fff;}
+.klarna .bnpl-tagline,.afterpay .bnpl-tagline{color:rgba(0,0,0,.85);}
+.bnpl-sub{font-size:11px;}
+.affirm .bnpl-sub{color:rgba(255,255,255,.6);}
+.klarna .bnpl-sub,.afterpay .bnpl-sub{color:rgba(0,0,0,.5);}
+.bnpl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.bnpl-card{background:#fff;border:1px solid var(--br);border-radius:10px;padding:14px;}
+.bnpl-card-icon{font-size:22px;margin-bottom:7px;}
+.bnpl-card-t{font-size:12px;font-weight:700;margin-bottom:3px;}
+.bnpl-card-s{font-size:10px;color:var(--mu);line-height:1.5;}
+.bnpl-steps{background:var(--sf);border-radius:10px;padding:14px;margin-bottom:18px;}
+.bnpl-steps-t{font-size:12px;font-weight:700;margin-bottom:12px;}
+.bnpl-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;}
+.bnpl-step:last-child{margin-bottom:0;}
+.bnpl-step-num{width:22px;height:22px;border-radius:50%;background:var(--tx);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0;}
+.bnpl-step-t{font-size:11px;font-weight:700;margin-bottom:1px;}
+.bnpl-step-s{font-size:10px;color:var(--mu);}
+.bnpl-tl{display:flex;margin-bottom:18px;position:relative;}
+.bnpl-tl::before{content:'';position:absolute;top:11px;left:12px;right:12px;height:1px;background:var(--br);}
+.bnpl-tl-i{flex:1;text-align:center;position:relative;}
+.bnpl-tl-dot{width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--br);margin:0 auto 5px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;}
+.bnpl-tl-dot.now{border-color:var(--g);background:var(--g);}
+.bnpl-tl-dot.now::after{content:'✓';color:#fff;font-size:8px;font-weight:800;}
+.bnpl-tl-a{font-size:11px;font-weight:700;}
+.bnpl-tl-d{font-size:9px;color:var(--mu);margin-top:1px;}
+.bnpl-tl-l{font-size:8px;color:var(--gd);font-weight:700;margin-top:1px;}
+.bnpl-faq{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;}
+.bnpl-faq-i{border:1px solid var(--br);border-radius:8px;overflow:hidden;}
+.bnpl-faq-q{padding:11px 13px;font-size:11px;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.bnpl-faq-a{padding:0 13px 11px;font-size:10px;color:var(--mu);line-height:1.6;display:none;}
+.bnpl-faq-a.open{display:block;}
+.bnpl-back{font-size:11px;font-weight:600;color:var(--mu);cursor:pointer;margin-bottom:14px;background:none;border:none;font-family:inherit;display:flex;align-items:center;gap:5px;}
+.bnpl-cta{background:var(--tx);color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;}
+
+/* ── MAP ── */
+.map-lay{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden;}
+.mapsb{border-right:1px solid var(--br);display:flex;flex-direction:column;overflow:hidden;background:#fff;}
+.mapst{padding:10px 12px;border-bottom:1px solid var(--br);}
+.mapsw{display:flex;align-items:center;gap:6px;background:var(--sf);border-radius:6px;padding:6px 10px;margin-bottom:8px;}
+.mapsw input{border:none;outline:none;background:transparent;font-size:11px;font-family:inherit;color:var(--tx);width:100%;}
+.map-cat-header{padding:7px 12px;font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--br);}
+.map-acc{overflow-y:auto;flex:1;}
+.map-group{border-bottom:1px solid var(--br);}
+.map-group-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;cursor:pointer;font-size:11px;font-weight:700;transition:background .1s;}
+.map-group-head:hover{background:var(--sf);}
+.map-group-head-left{display:flex;align-items:center;gap:7px;}
+.map-group-arrow{font-size:8px;color:var(--mu);transition:transform .18s;}
+.map-group-arrow.open{transform:rotate(180deg);}
+.map-group-items{display:none;padding:2px 0 6px 34px;}
+.map-group-items.open{display:block;}
+.map-group-item{padding:5px 10px;font-size:10px;color:var(--mu);cursor:pointer;border-radius:5px;}
+.map-group-item:hover{background:var(--sf);color:var(--tx);}
+.map-group-item.act{color:var(--gd);font-weight:600;}
+.map-listings-wrap{border-top:2px solid var(--br);}
+.map-listings-header{padding:7px 12px;font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;display:flex;justify-content:space-between;}
+.map-list{max-height:180px;overflow-y:auto;}
+.mit{display:flex;gap:9px;padding:8px 12px;border-bottom:1px solid var(--br);cursor:pointer;transition:background .1s;}
+.mit:hover{background:var(--sf);}
+.mit.act{background:var(--gl);border-left:3px solid var(--g);}
+.mem{width:38px;height:38px;background:var(--sf);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.mii{flex:1;}
+.mit2{font-size:11px;font-weight:700;margin-bottom:1px;}
+.mid{font-size:9px;color:var(--mu);margin-bottom:1px;}
+.mip{font-size:12px;font-weight:800;}
+.mim{font-size:8px;color:var(--gd);font-weight:600;}
+.map-con{flex:1;position:relative;overflow:hidden;}
+.mfl{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:#fff;border-radius:10px;border:1px solid var(--br);padding:12px;width:240px;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none;z-index:10;}
+.mfl.show{display:block;}
+.mft{display:flex;gap:9px;margin-bottom:8px;}
+.mfe{width:38px;height:38px;background:var(--sf);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.mftit{font-size:11px;font-weight:700;margin-bottom:1px;}
+.mfs{font-size:9px;color:var(--mu);}
+.mfc{display:inline-block;font-size:8px;background:var(--gl);color:var(--gd);padding:2px 5px;border-radius:3px;font-weight:600;margin-top:2px;}
+.mfp{font-size:16px;font-weight:900;margin-bottom:2px;}
+.mfm{font-size:9px;color:var(--gd);font-weight:600;margin-bottom:8px;}
+.mfbs{display:flex;gap:6px;}
+.mfbv{flex:1;background:var(--tx);color:#fff;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.mfbs2{background:none;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;cursor:pointer;font-size:11px;}
+.mfx{position:absolute;top:8px;right:9px;background:var(--sf);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:10px;color:var(--mu);}
+.mapsa{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;}
+.mapsa button{background:#fff;border:1px solid var(--br);border-radius:14px;padding:6px 14px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ── MESSAGES ── */
+.msg-lay{display:grid;grid-template-columns:250px 1fr;flex:1;overflow:hidden;}
+.msb{border-right:1px solid var(--br);display:flex;flex-direction:column;overflow:hidden;}
+.msbt{padding:10px 12px;border-bottom:1px solid var(--br);}
+.msbtit{font-size:13px;font-weight:800;margin-bottom:8px;}
+.msw2{display:flex;align-items:center;gap:6px;background:var(--sf);border-radius:6px;padding:6px 10px;}
+.msw2 input{border:none;outline:none;background:transparent;font-size:11px;font-family:inherit;color:var(--tx);width:100%;}
+.cvl{flex:1;overflow-y:auto;}
+.cv{display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--br);cursor:pointer;transition:background .1s;}
+.cv:hover{background:var(--sf);}
+.cv.act{background:var(--gl);}
+.cav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.ci2{flex:1;min-width:0;}
+.ct2{display:flex;justify-content:space-between;margin-bottom:1px;}
+.cn2{font-size:11px;font-weight:700;}
+.ctm{font-size:9px;color:var(--mu);}
+.cprd{font-size:9px;color:var(--gd);font-weight:600;margin-bottom:1px;}
+.cpv{font-size:10px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ud{width:6px;height:6px;border-radius:50%;background:var(--g);flex-shrink:0;margin-top:3px;}
+.cha{display:flex;flex-direction:column;overflow:hidden;}
+.chh{padding:10px 14px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:9px;}
+.chav{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.chn{font-size:12px;font-weight:700;}
+.chs{font-size:9px;color:var(--gd);font-weight:600;}
+.chac{margin-left:auto;display:flex;gap:5px;}
+.cab{background:none;border:1.5px solid var(--br);border-radius:5px;padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--mu);}
+.pr{background:var(--sf);border:1px solid var(--br);border-radius:8px;padding:8px 11px;margin:10px 14px;display:flex;align-items:center;gap:9px;}
+.pre{font-size:18px;width:34px;height:34px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.prt{font-size:11px;font-weight:700;}
+.prp{font-size:10px;color:var(--gd);font-weight:700;}
+.prc{font-size:9px;color:var(--mu);}
+.ofb{background:var(--tx);color:#fff;border:none;border-radius:5px;padding:6px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto;white-space:nowrap;flex-shrink:0;}
+.msgs2{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.msg2{display:flex;gap:7px;max-width:72%;}
+.msg2.mine{align-self:flex-end;flex-direction:row-reverse;}
+.mav2{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;}
+.bbl{padding:8px 11px;border-radius:10px;font-size:11px;line-height:1.5;}
+.msg2.theirs .bbl{background:var(--sf);border-radius:10px 10px 10px 3px;}
+.msg2.mine .bbl{background:var(--tx);color:#fff;border-radius:10px 10px 3px 10px;}
+.mtime{font-size:8px;color:var(--mu);margin-top:2px;}
+.msg2.mine .mtime{text-align:right;}
+.obbl{background:var(--gl);border:1px solid rgba(0,200,83,.2);border-radius:10px;padding:9px 11px;margin-top:2px;}
+.oblbl{font-size:8px;font-weight:700;color:var(--gd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.obamt{font-size:16px;font-weight:900;}
+.obac{display:flex;gap:5px;margin-top:7px;}
+.oba{background:var(--g);color:#fff;border:none;border-radius:5px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;}
+.obd{background:#fff;color:var(--tx);border:1.5px solid var(--br);border-radius:5px;padding:5px 8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;}
+.chin{padding:8px 12px;border-top:1px solid var(--br);display:flex;gap:7px;align-items:center;}
+.ciw{flex:1;background:var(--sf);border-radius:8px;padding:7px 10px;display:flex;gap:6px;align-items:center;}
+.ciw input{border:none;outline:none;background:transparent;font-size:11px;font-family:inherit;color:var(--tx);width:100%;}
+.ciw input::placeholder{color:#c0bfbb;}
+.och{background:none;border:1.5px solid var(--br);border-radius:6px;padding:7px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;}
+.sndb{background:var(--tx);color:#fff;border:none;border-radius:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;}
+
+/* ── PROFILE ── */
+.pro-lay{display:grid;grid-template-columns:240px 1fr;gap:16px;padding:18px;flex:1;overflow-y:auto;}
+.pcard{background:#fff;border:1px solid var(--br);border-radius:10px;overflow:hidden;}
+.pcov{height:60px;background:var(--tx);position:relative;}
+.pcov::after{content:'';position:absolute;right:-14px;bottom:-14px;width:70px;height:70px;background:var(--g);border-radius:50%;opacity:.15;}
+.pavw{padding:0 14px;}
+.pav2{width:56px;height:56px;border-radius:50%;background:var(--g);border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-top:-28px;position:relative;}
+.pvb{position:absolute;bottom:0;right:0;background:var(--g);color:#fff;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-size:8px;border:2px solid #fff;}
+.pinf{padding:8px 14px 14px;}
+.pnm{font-size:14px;font-weight:800;letter-spacing:-.5px;margin-bottom:1px;}
+.phn{font-size:10px;color:var(--mu);margin-bottom:7px;}
+.pbio{font-size:10px;color:var(--mu);line-height:1.5;margin-bottom:10px;}
+.pmt{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.pmi{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--mu);}
+.pst{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--br);border-top:1px solid var(--br);}
+.ps2{background:#fff;padding:10px 4px;text-align:center;}
+.psv{font-size:14px;font-weight:800;display:block;}
+.psl{font-size:8px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:1px;}
+.rtr{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--br);}
+.strs{color:#f5a623;font-size:12px;}
+.rn{font-size:16px;font-weight:800;}
+.rc{font-size:10px;color:var(--mu);}
+.pac{padding:10px 14px;border-top:1px solid var(--br);display:flex;gap:6px;}
+.ped{flex:1;background:var(--tx);color:#fff;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.psh{background:none;border:1.5px solid var(--br);border-radius:6px;padding:8px 10px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--mu);}
+.tabs{display:flex;border-bottom:1px solid var(--br);background:#fff;border-radius:10px 10px 0 0;border:1px solid var(--br);}
+.tab{flex:1;padding:9px;text-align:center;font-size:11px;font-weight:600;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;}
+.tab.act{color:var(--tx);border-bottom-color:var(--tx);}
+.tbc{padding:14px;display:none;background:#fff;border:1px solid var(--br);border-top:none;border-radius:0 0 10px 10px;}
+.tbc.show{display:block;}
+.lg2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.lc{border:1px solid var(--br);border-radius:8px;overflow:hidden;cursor:pointer;}
+.lcimg{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--sf);position:relative;}
+.lsa{position:absolute;top:4px;left:4px;font-size:7px;font-weight:700;padding:2px 5px;border-radius:3px;background:var(--gl);color:var(--gd);}
+.lss{background:#fce4ec;color:#c62828;}
+.lcb{padding:8px;}
+.lct{font-size:10px;font-weight:600;margin-bottom:2px;}
+.lcp{font-size:12px;font-weight:800;}
+.lcv{font-size:8px;color:var(--mu);margin-top:1px;}
+.revs{display:flex;flex-direction:column;gap:8px;}
+.rev{border:1px solid var(--br);border-radius:8px;padding:10px 12px;}
+.revt{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.rav{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.rnm{font-size:11px;font-weight:700;}
+.rdt{font-size:9px;color:var(--mu);}
+.rst{color:#f5a623;font-size:10px;margin-left:auto;}
+.rtxt{font-size:11px;color:var(--mu);line-height:1.5;}
+.rprd{font-size:9px;color:var(--gd);font-weight:600;margin-top:4px;}
+
+/* ── PRODUCT MODAL ── */
+.prod-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.prod-overlay.open{display:flex;}
+.prod-modal{background:#fff;border-radius:14px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;position:relative;}
+.prod-left{background:var(--sf);display:flex;flex-direction:column;border-radius:14px 0 0 14px;overflow:hidden;}
+.prod-img-big{flex:1;display:flex;align-items:center;justify-content:center;font-size:90px;min-height:220px;}
+.prod-img-thumbs{display:flex;gap:6px;padding:12px;background:rgba(0,0,0,.04);}
+.prod-thumb{width:40px;height:40px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:2px solid transparent;}
+.prod-thumb.act{border-color:var(--tx);}
+.prod-right{padding:20px;display:flex;flex-direction:column;overflow-y:auto;}
+.prod-close{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.9);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:13px;color:var(--mu);z-index:10;}
+.prod-badges{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.prod-bdg{font-size:9px;font-weight:700;padding:3px 8px;border-radius:12px;}
+.bdg-cond{background:var(--gl);color:var(--gd);}
+.bdg-loc{background:var(--sf);color:var(--mu);}
+.bdg-bnpl{background:#fff0f5;color:#c2185b;}
+.prod-title{font-size:18px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;line-height:1.2;}
+.prod-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+.prod-price{font-size:26px;font-weight:900;letter-spacing:-1px;}
+.prod-monthly{font-size:11px;color:var(--gd);font-weight:600;}
+.prod-desc{font-size:11px;color:var(--mu);line-height:1.6;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--br);}
+.prod-seller{display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--br);}
+.prod-seller-av{width:36px;height:36px;border-radius:50%;background:var(--tx);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.prod-seller-name{font-size:12px;font-weight:700;}
+.prod-seller-sub{font-size:9px;color:var(--mu);margin-top:1px;}
+.prod-seller-v{font-size:9px;color:var(--gd);font-weight:600;margin-top:2px;}
+.pay-tabs{display:flex;gap:0;margin-bottom:12px;border:1px solid var(--br);border-radius:8px;overflow:hidden;}
+.pay-tab{flex:1;padding:7px 4px;text-align:center;font-size:9px;font-weight:700;cursor:pointer;color:var(--mu);background:#fff;border:none;font-family:inherit;}
+.pay-tab.act{background:var(--tx);color:#fff;}
+.pay-tab-content{display:none;}
+.pay-tab-content.show{display:block;}
+.affirm-panel{background:#000;border-radius:10px;padding:14px;margin-bottom:10px;}
+.affirm-logo{color:#60d7a9;font-size:14px;font-weight:900;letter-spacing:.5px;margin-bottom:8px;}
+.affirm-amount{font-size:22px;font-weight:900;color:#fff;margin-bottom:2px;}
+.affirm-sub{font-size:10px;color:rgba(255,255,255,.6);margin-bottom:10px;}
+.affirm-tl{display:flex;position:relative;}
+.affirm-tl::before{content:'';position:absolute;top:8px;left:10px;right:10px;height:1px;background:rgba(255,255,255,.15);}
+.affirm-tl-i{flex:1;text-align:center;position:relative;}
+.affirm-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:#000;margin:0 auto 4px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;}
+.affirm-dot.now{border-color:#60d7a9;background:#60d7a9;}
+.affirm-dot.now::after{content:'✓';color:#000;font-size:7px;font-weight:800;}
+.affirm-tl-a{font-size:10px;font-weight:700;color:#fff;}
+.affirm-tl-d{font-size:8px;color:rgba(255,255,255,.5);}
+.affirm-perks{display:flex;gap:6px;margin-top:10px;}
+.affirm-perk{flex:1;background:rgba(255,255,255,.08);border-radius:6px;padding:7px;text-align:center;font-size:9px;color:rgba(255,255,255,.7);}
+.affirm-perk-icon{font-size:14px;margin-bottom:3px;}
+.klarna-panel{background:#ffb3c7;border-radius:10px;padding:14px;margin-bottom:10px;}
+.klarna-logo{color:#17120e;font-size:14px;font-weight:900;letter-spacing:.5px;margin-bottom:8px;}
+.klarna-opts{display:flex;gap:6px;margin-bottom:10px;}
+.klarna-opt{flex:1;background:rgba(255,255,255,.5);border:2px solid transparent;border-radius:8px;padding:8px;text-align:center;cursor:pointer;}
+.klarna-opt.act{background:#fff;border-color:#17120e;}
+.klarna-opt-label{font-size:10px;font-weight:800;color:#17120e;margin-bottom:1px;}
+.klarna-opt-sub{font-size:9px;color:rgba(23,18,14,.6);}
+.klarna-info{background:rgba(255,255,255,.5);border-radius:8px;padding:10px;font-size:10px;color:#17120e;line-height:1.5;}
+.afterpay-panel{background:#b2fce4;border-radius:10px;padding:14px;margin-bottom:10px;}
+.afterpay-logo{color:#0d0d0d;font-size:14px;font-weight:900;letter-spacing:.5px;margin-bottom:8px;}
+.afterpay-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.afterpay-item{background:rgba(255,255,255,.5);border-radius:8px;padding:8px;text-align:center;}
+.afterpay-item-n{font-size:9px;font-weight:700;color:rgba(13,13,13,.5);margin-bottom:2px;}
+.afterpay-item-a{font-size:14px;font-weight:800;color:#0d0d0d;}
+.afterpay-item-d{font-size:8px;color:rgba(13,13,13,.5);margin-top:1px;}
+.afterpay-first{background:rgba(13,13,13,.1);border-radius:6px;padding:7px;font-size:10px;color:#0d0d0d;text-align:center;font-weight:600;}
+.fullpay-panel{background:var(--sf);border-radius:10px;padding:14px;margin-bottom:10px;}
+.fullpay-price{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;}
+.fullpay-sub{font-size:10px;color:var(--mu);margin-bottom:10px;}
+.fullpay-perks{display:flex;flex-direction:column;gap:5px;}
+.fullpay-perk{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--mu);}
+.fullpay-perk-icon{width:16px;height:16px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;}
+.prod-cta{display:flex;gap:7px;margin-top:auto;padding-top:12px;}
+.prod-buy{flex:1;background:var(--tx);color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.prod-msg{background:none;border:1.5px solid var(--br);border-radius:8px;padding:12px 14px;font-size:13px;cursor:pointer;color:var(--mu);}
+.prod-save-btn{background:none;border:1.5px solid var(--br);border-radius:8px;padding:12px 14px;font-size:14px;cursor:pointer;}
+
+/* ── SELL MODAL ── */
+.sell-wrap{background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;position:fixed;inset:0;z-index:600;}
+.sell-wrap.open{display:flex;}
+.sbox{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.sell-head{padding:18px 20px 14px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between;}
+.sell-title{font-size:16px;font-weight:800;}
+.xb{background:var(--sf);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:13px;color:var(--mu);display:flex;align-items:center;justify-content:center;}
+.sell-body{padding:18px 20px;}
+.upl{border:2px dashed var(--br);border-radius:12px;padding:22px;text-align:center;cursor:pointer;margin-bottom:14px;transition:all .15s;}
+.upl:hover{border-color:var(--g);}
+.upl-icon{font-size:28px;margin-bottom:6px;}
+.upl-text{font-size:13px;font-weight:700;margin-bottom:2px;}
+.upl-sub{font-size:11px;color:var(--mu);}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fgroup{margin-bottom:13px;}
+.fl2{font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px;display:block;}
+.fi2{width:100%;border:1.5px solid var(--br);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;color:var(--tx);background:#fff;}
+.fi2:focus{border-color:var(--tx);}
+.bnpl-toggle{background:var(--gl);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.bnpl-toggle-t{font-size:12px;font-weight:700;color:var(--gd);margin-bottom:2px;}
+.bnpl-toggle-s{font-size:10px;color:var(--gd);opacity:.8;}
+.toggle-sw{width:38px;height:22px;background:var(--g);border-radius:11px;position:relative;cursor:pointer;flex-shrink:0;}
+.toggle-sw::after{content:'';width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;right:2px;top:2px;}
+.sell-submit{width:100%;background:var(--tx);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.sell-submit:hover{background:#222;}
+.sell-err{color:#e53935;font-size:11px;margin-bottom:10px;display:none;}
+.sell-err.show{display:block;}
+
+/* ── OFFER MODAL ── */
+.offer-wrap{background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;position:fixed;inset:0;z-index:700;}
+.offer-wrap.open{display:flex;}
+.ofmbox{background:#fff;border-radius:12px;width:100%;max-width:320px;padding:22px;}
+.ofmtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ofmtit{font-size:15px;font-weight:800;}
+.ofmiu{border:2px solid var(--tx);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+.ofmin{border:none;outline:none;font-size:22px;font-weight:900;font-family:inherit;color:var(--tx);width:100%;background:transparent;}
+.bb{flex:1;background:var(--tx);color:#fff;border:none;border-radius:7px;padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.bm{background:#fff;color:var(--tx);border:1.5px solid var(--br);border-radius:7px;padding:11px 14px;font-size:12px;cursor:pointer;font-family:inherit;}
+
+/* ── AI HELP MODAL ── */
+.ai-modal{background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;position:fixed;inset:0;z-index:800;}
+.ai-modal.open{display:flex;}
+.ai-box{background:#fff;border-radius:16px;width:100%;max-width:420px;overflow:hidden;}
+.ai-head{background:linear-gradient(135deg,#667eea,#764ba2);padding:14px 18px;display:flex;align-items:center;gap:10px;}
+.ai-head-ic{width:34px;height:34px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.ai-head-title{font-size:13px;font-weight:800;color:#fff;}
+.ai-head-sub{font-size:10px;color:rgba(255,255,255,.7);}
+.ai-close{margin-left:auto;background:rgba(255,255,255,.2);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:12px;color:#fff;}
+.ai-msgs{padding:12px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;}
+.ai-msg{display:flex;gap:7px;}
+.ai-msg.user{flex-direction:row-reverse;}
+.ai-av-ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.ai-av-ic.bot{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+.ai-av-ic.usr{background:var(--g);color:#fff;font-weight:700;}
+.ai-bbl{padding:8px 11px;border-radius:10px;font-size:11px;line-height:1.5;max-width:78%;}
+.ai-msg.bot .ai-bbl{background:var(--sf);border-radius:10px 10px 10px 3px;}
+.ai-msg.user .ai-bbl{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:10px 10px 3px 10px;}
+.ai-sugs{padding:0 12px 9px;display:flex;gap:5px;flex-wrap:wrap;}
+.ai-sug{background:var(--sf);border:1px solid var(--br);border-radius:12px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;color:var(--tx);}
+.ai-sug:hover{background:var(--gl);border-color:var(--g);color:var(--gd);}
+.ai-inp-row{padding:9px 12px;border-top:1px solid var(--br);display:flex;gap:7px;}
+.ai-inp{flex:1;border:1.5px solid var(--br);border-radius:7px;padding:7px 11px;font-size:12px;font-family:inherit;outline:none;color:var(--tx);}
+.ai-inp:focus{border-color:#667eea;}
+.ai-send{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:14px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--tx);color:#fff;border-radius:7px;padding:9px 16px;font-size:11px;font-weight:600;z-index:9999;transition:transform .2s;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:4px;">
+    <button class="hbg" onclick="toggleSb()"><span></span><span></span><span></span></button>
+    <div class="logo" onclick="goScr('home')">flex<span>buy</span></div>
+    <div class="sw" style="margin-left:8px;">
+      <div class="sw-wrap">
+        <span class="sw-ico">🔍</span>
+        <input type="text" id="search-input" placeholder="Search listings..."
+          oninput="onSearch(this.value)"
+          onkeydown="if(event.key==='Enter'){doSearch(this.value);}"
+          onblur="setTimeout(()=>hideSearch(),200)">
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <button class="search-btn" onclick="doSearch(document.getElementById('search-input').value)">Search</button>
+    </div>
+  </div>
+  <div class="tbr">
+    <button class="btn-help" onclick="openAI()">✨ Help</button>
+    <button class="btn-sell" onclick="openSell()">+ Sell</button>
+    <div class="user-av" id="user-av" onclick="goScr('profile')"></div>
+    <button class="btn-signin" id="signin-btn" onclick="goScr('login')">Sign in</button>
+  </div>
+</div>
+
+<div class="body">
+<!-- SIDEBAR -->
+<div class="sb" id="sb">
+  <div class="sbnav">
+    <div class="sbsec">Marketplace</div>
+    <div class="sbi act" id="nav-home" onclick="goScr('home')"><span class="sbi-ic">🏠</span> Home</div>
+    <div class="sbi" id="nav-map" onclick="goScr('map')"><span class="sbi-ic">📍</span> Near Me</div>
+    <div class="sbi" id="nav-saved" onclick="goScr('saved')"><span class="sbi-ic">🤍</span> Saved</div>
+
+    <div class="sbsec">Categories</div>
+    <!-- Electronics -->
+    <div class="sb-cat">
+      <div class="sb-cat-head" onclick="toggleSbCat(this,'sb-elec')">
+        <div class="sb-cat-head-left"><span class="sbi-ic">📱</span> Electronics</div>
+        <span class="sb-cat-arrow">▼</span>
+      </div>
+      <div class="sb-cat-items" id="sb-elec">
+        <div class="sb-cat-item" onclick="filterAndGo('phones','📱 Phones')">Phones</div>
+        <div class="sb-cat-item" onclick="filterAndGo('laptops','💻 Laptops')">Laptops & Computers</div>
+        <div class="sb-cat-item" onclick="filterAndGo('audio','🎧 Audio')">Audio & Headphones</div>
+        <div class="sb-cat-item" onclick="filterAndGo('cameras','📸 Cameras')">Cameras</div>
+        <div class="sb-cat-item" onclick="filterAndGo('gaming','🎮 Gaming')">Gaming</div>
+      </div>
+    </div>
+    <!-- Vehicles -->
+    <div class="sb-cat">
+      <div class="sb-cat-head" onclick="toggleSbCat(this,'sb-veh')">
+        <div class="sb-cat-head-left"><span class="sbi-ic">🚗</span> Vehicles</div>
+        <span class="sb-cat-arrow">▼</span>
+      </div>
+      <div class="sb-cat-items" id="sb-veh">
+        <div class="sb-cat-item" onclick="filterAndGo('cars','🚗 Cars')">Cars</div>
+        <div class="sb-cat-item" onclick="filterAndGo('motorcycles','🏍️ Motorcycles')">Motorcycles</div>
+        <div class="sb-cat-item" onclick="filterAndGo('bicycles','🚲 Bicycles')">Bicycles</div>
+        <div class="sb-cat-item" onclick="filterAndGo('scooters','🛴 Scooters')">Scooters & E-bikes</div>
+      </div>
+    </div>
+    <!-- Home -->
+    <div class="sb-cat">
+      <div class="sb-cat-head" onclick="toggleSbCat(this,'sb-home')">
+        <div class="sb-cat-head-left"><span class="sbi-ic">🏠</span> Home & Garden</div>
+        <span class="sb-cat-arrow">▼</span>
+      </div>
+      <div class="sb-cat-items" id="sb-home">
+        <div class="sb-cat-item" onclick="filterAndGo('furniture','🛋️ Furniture')">Furniture</div>
+        <div class="sb-cat-item" onclick="filterAndGo('appliances','🍳 Appliances')">Appliances</div>
+        <div class="sb-cat-item" onclick="filterAndGo('tools','🔧 Tools')">Tools & Hardware</div>
+      </div>
+    </div>
+    <!-- Sports -->
+    <div class="sb-cat">
+      <div class="sb-cat-head" onclick="toggleSbCat(this,'sb-sport')">
+        <div class="sb-cat-head-left"><span class="sbi-ic">⚽</span> Sports</div>
+        <span class="sb-cat-arrow">▼</span>
+      </div>
+      <div class="sb-cat-items" id="sb-sport">
+        <div class="sb-cat-item" onclick="filterAndGo('fitness','🏋️ Fitness')">Fitness Equipment</div>
+        <div class="sb-cat-item" onclick="filterAndGo('outdoor','🏕️ Outdoor')">Outdoor & Camping</div>
+        <div class="sb-cat-item" onclick="filterAndGo('sports','⚽ Sports Gear')">Sports Gear</div>
+      </div>
+    </div>
+    <!-- Fashion -->
+    <div class="sb-cat">
+      <div class="sb-cat-head" onclick="toggleSbCat(this,'sb-fashion')">
+        <div class="sb-cat-head-left"><span class="sbi-ic">👗</span> Fashion</div>
+        <span class="sb-cat-arrow">▼</span>
+      </div>
+      <div class="sb-cat-items" id="sb-fashion">
+        <div class="sb-cat-item" onclick="filterAndGo('mens','👔 Men\'s')">Men's Clothing</div>
+        <div class="sb-cat-item" onclick="filterAndGo('womens','👗 Women\'s')">Women's Clothing</div>
+        <div class="sb-cat-item" onclick="filterAndGo('shoes','👟 Shoes')">Shoes</div>
+        <div class="sb-cat-item" onclick="filterAndGo('bags','👜 Bags')">Bags & Accessories</div>
+      </div>
+    </div>
+
+    <div class="sbsec">Account</div>
+    <div class="sbi" id="nav-messages" onclick="goScr('messages')"><span class="sbi-ic">💬</span> Messages <span class="sbbdg">3</span></div>
+    <div class="sbi" id="nav-profile" onclick="goScr('profile')"><span class="sbi-ic">👤</span> Profile</div>
+
+    <div class="sbsec">Pay Later</div>
+    <div class="sbi" onclick="goScr('bnpl','affirm')"><span style="font-size:8px;font-weight:800;background:#000;color:#60d7a9;border-radius:3px;padding:1px 4px;">A</span> Affirm</div>
+    <div class="sbi" onclick="goScr('bnpl','klarna')"><span style="font-size:8px;font-weight:800;background:#ffb3c7;color:#17120e;border-radius:3px;padding:1px 4px;">K</span> Klarna</div>
+    <div class="sbi" onclick="goScr('bnpl','afterpay')"><span style="font-size:8px;font-weight:800;background:#b2fce4;color:#0d0d0d;border-radius:3px;padding:1px 4px;">AP</span> Afterpay</div>
+  </div>
+  <div class="sbbot"><button class="sellbtn" onclick="openSell()">+ List an Item</button></div>
+</div>
+
+<!-- HOME SCREEN -->
+<div class="scr act" id="scr-home">
+  <div class="pp">
+    <div class="hero">
+      <div>
+        <h1>Buy local.<br><em>Pay over time.</em></h1>
+        <p>Second-hand marketplace with flexible BNPL payments.</p>
+        <div class="hero-btns">
+          <button class="hbp">Browse listings</button>
+          <button class="hbg2" onclick="openSell()">Start selling</button>
+        </div>
+      </div>
+      <div class="pills">
+        <div class="pill" onclick="goScr('bnpl','affirm')"><b>Affirm</b> 0% APR · 4 payments →</div>
+        <div class="pill" onclick="goScr('bnpl','klarna')"><b>Klarna</b> Pay flexible →</div>
+        <div class="pill" onclick="goScr('bnpl','afterpay')"><b>Afterpay</b> 4x biweekly →</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stl">Active listings</div><div class="stv">12,480</div></div>
+      <div class="stat"><div class="stl">Sellers near you</div><div class="stv">340</div></div>
+      <div class="stat"><div class="stl">Avg. savings</div><div class="stv g">62%</div></div>
+      <div class="stat"><div class="stl">BNPL options</div><div class="stv">3</div></div>
+    </div>
+    <div class="sh">
+      <div class="sht" id="grid-title">Listings near you</div>
+      <button class="sha" id="grid-clear" onclick="clearFilter()">View all →</button>
+    </div>
+    <div class="cats">
+      <div class="cat act" onclick="fCat(this,'all')">All</div>
+      <div class="cat" onclick="fCat(this,'electronics')">Electronics</div>
+      <div class="cat" onclick="fCat(this,'furniture')">Furniture</div>
+      <div class="cat" onclick="fCat(this,'sports')">Sports</div>
+      <div class="cat" onclick="fCat(this,'clothing')">Clothing</div>
+      <div class="cat" onclick="fCat(this,'vehicles')">Vehicles</div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<!-- SAVED SCREEN -->
+<div class="scr" id="scr-saved">
+  <div class="saved-page">
+    <div class="sh" style="margin-bottom:16px;">
+      <div class="sht">Saved items</div>
+      <span style="font-size:11px;color:var(--mu);" id="saved-count">0 items</span>
+    </div>
+    <div class="grid" id="saved-grid"></div>
+    <div class="saved-empty" id="saved-empty">
+      <div class="saved-empty-icon">🤍</div>
+      <div class="saved-empty-t">No saved items yet</div>
+      <div class="saved-empty-s">Tap the heart on any listing to save it here</div>
+      <button class="saved-browse-btn" onclick="goScr('home')">Browse listings</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="login-scr" id="scr-login">
+  <div class="login-box">
+    <div class="login-logo">flex<span>buy</span></div>
+    <div class="login-sub">Sign in to buy, sell, and pay over time.</div>
+
+    <!-- Forgot Password Panel -->
+    <div class="forgot-panel" id="forgot-panel">
+      <div class="back-link" onclick="showForgot(false)">← Back to sign in</div>
+      <label class="fl">Email address</label>
+      <input class="fi" type="email" id="forgot-email" placeholder="you@email.com">
+      <button class="login-btn" onclick="doForgot()">Send reset link</button>
+    </div>
+
+    <!-- Main Login/Signup -->
+    <div id="main-auth">
+      <div class="login-tabs">
+        <button class="login-tab act" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+        <button class="login-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- SIGN IN -->
+      <div class="form-block act" id="form-signin">
+        <button class="gb" onclick="doGoogleLogin()">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <button class="ab" onclick="doAppleLogin()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Continue with Apple
+        </button>
+        <div class="dv">or</div>
+        <label class="fl">Email</label>
+        <input class="fi" type="email" id="signin-email" placeholder="you@email.com">
+        <label class="fl">Password</label>
+        <input class="fi" type="password" id="signin-pass" placeholder="••••••••">
+        <button class="login-btn" onclick="doSignIn()">Sign In</button>
+        <div class="login-forgot" onclick="showForgot(true)">Forgot password?</div>
+      </div>
+
+      <!-- SIGN UP -->
+      <div class="form-block" id="form-signup">
+        <button class="gb" onclick="doGoogleLogin()">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign up with Google
+        </button>
+        <button class="ab" onclick="doAppleLogin()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Sign up with Apple
+        </button>
+        <div class="dv">or</div>
+        <div class="fr" style="gap:8px;">
+          <div><label class="fl">First name</label><input class="fi" id="su-first" placeholder="John"></div>
+          <div><label class="fl">Last name</label><input class="fi" id="su-last" placeholder="Doe"></div>
+        </div>
+        <label class="fl">Email</label>
+        <input class="fi" type="email" id="su-email" placeholder="you@email.com">
+        <label class="fl">Password</label>
+        <input class="fi" type="password" id="su-pass" placeholder="Min. 8 characters">
+        <label class="fl">Location</label>
+        <input class="fi" id="su-loc" placeholder="Brooklyn, NY">
+        <button class="login-btn" onclick="doSignUp()">Create Account</button>
+        <div class="login-terms">By signing up you agree to our <a>Terms</a> and <a>Privacy Policy</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BNPL SCREEN -->
+<div class="scr" id="scr-bnpl">
+  <div class="bnpl-page" id="bnpl-content"></div>
+</div>
+
+<!-- MAP SCREEN -->
+<div class="scr" id="scr-map" style="flex-direction:row;">
+  <div class="map-lay" style="flex:1;">
+    <div class="mapsb">
+      <div class="mapst">
+        <div class="mapsw"><span style="color:#c0bfbb;font-size:11px;">🔍</span><input type="text" placeholder="Search near me..."></div>
+      </div>
+      <div class="map-cat-header">Categories</div>
+      <div class="map-acc">
+        <div class="map-group">
+          <div class="map-group-head" onclick="toggleMapGroup(this,'mg-elec')">
+            <div class="map-group-head-left"><span>📱</span> Electronics</div>
+            <span class="map-group-arrow">▼</span>
+          </div>
+          <div class="map-group-items open" id="mg-elec">
+            <div class="map-group-item act" onclick="selMapCat(this)">All Electronics</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Phones</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Laptops</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Audio</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Cameras</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Gaming</div>
+          </div>
+        </div>
+        <div class="map-group">
+          <div class="map-group-head" onclick="toggleMapGroup(this,'mg-veh')">
+            <div class="map-group-head-left"><span>🚗</span> Vehicles</div>
+            <span class="map-group-arrow">▼</span>
+          </div>
+          <div class="map-group-items" id="mg-veh">
+            <div class="map-group-item" onclick="selMapCat(this)">Cars</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Motorcycles</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Bicycles</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Scooters</div>
+          </div>
+        </div>
+        <div class="map-group">
+          <div class="map-group-head" onclick="toggleMapGroup(this,'mg-home')">
+            <div class="map-group-head-left"><span>🏠</span> Home & Garden</div>
+            <span class="map-group-arrow">▼</span>
+          </div>
+          <div class="map-group-items" id="mg-home">
+            <div class="map-group-item" onclick="selMapCat(this)">Furniture</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Appliances</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Tools</div>
+          </div>
+        </div>
+        <div class="map-group">
+          <div class="map-group-head" onclick="toggleMapGroup(this,'mg-sport')">
+            <div class="map-group-head-left"><span>⚽</span> Sports</div>
+            <span class="map-group-arrow">▼</span>
+          </div>
+          <div class="map-group-items" id="mg-sport">
+            <div class="map-group-item" onclick="selMapCat(this)">Fitness Equipment</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Outdoor</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Sports Gear</div>
+          </div>
+        </div>
+        <div class="map-group">
+          <div class="map-group-head" onclick="toggleMapGroup(this,'mg-fashion')">
+            <div class="map-group-head-left"><span>👗</span> Fashion</div>
+            <span class="map-group-arrow">▼</span>
+          </div>
+          <div class="map-group-items" id="mg-fashion">
+            <div class="map-group-item" onclick="selMapCat(this)">Men's Clothing</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Women's Clothing</div>
+            <div class="map-group-item" onclick="selMapCat(this)">Shoes</div>
+          </div>
+        </div>
+        <div class="map-listings-wrap">
+          <div class="map-listings-header">
+            <span id="mrc">8 listings nearby</span>
+            <span style="color:var(--g);cursor:pointer;font-size:9px;" onclick="selMapCat(null)">Clear</span>
+          </div>
+          <div class="map-list" id="mlst"></div>
+        </div>
+      </div>
+    </div>
+    <div class="map-con">
+      <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-74.00%2C40.66%2C-73.90%2C40.72&layer=mapnik" style="width:100%;height:100%;border:none;" loading="lazy"></iframe>
+      <div class="mapsa"><button onclick="toast('Searching this area...')">🔍 Search this area</button></div>
+      <div class="mfl" id="mfl">
+        <button class="mfx" onclick="closeMfl()">✕</button>
+        <div class="mft"><div class="mfe" id="mfe"></div><div><div class="mftit" id="mftit"></div><div class="mfs" id="mfs"></div><div class="mfc" id="mfc"></div></div></div>
+        <div class="mfp" id="mfp"></div><div class="mfm" id="mfm"></div>
+        <div class="mfbs"><button class="mfbv" onclick="toast('Opening listing...')">Buy Now</button><button class="mfbs2" onclick="toast('Saved! ❤️')">🤍</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MESSAGES SCREEN -->
+<div class="scr" id="scr-messages">
+  <div class="msg-lay">
+    <div class="msb">
+      <div class="msbt"><div class="msbtit">Messages</div><div class="msw2"><span style="color:#c0bfbb;font-size:11px;">🔍</span><input type="text" placeholder="Search..."></div></div>
+      <div class="cvl" id="cvl"></div>
+    </div>
+    <div class="cha">
+      <div class="chh"><div class="chav" id="chav"></div><div><div class="chn" id="chn"></div><div class="chs">● Online now</div></div><div class="chac"><button class="cab">View listing</button><button class="cab">Profile</button></div></div>
+      <div class="pr"><div class="pre" id="pre"></div><div><div class="prt" id="prt"></div><div class="prp" id="prp"></div><div class="prc" id="prc"></div></div><button class="ofb" onclick="openOfm()">Make Offer</button></div>
+      <div class="msgs2" id="msgs2"></div>
+      <div class="chin">
+        <div class="ciw"><input type="text" id="msgin" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()"></div>
+        <button class="och" onclick="openOfm()">💰 Offer</button>
+        <button class="sndb" onclick="sendMsg()">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE SCREEN -->
+<div class="scr" id="scr-profile">
+  <div class="pro-lay">
+    <div>
+      <div class="pcard">
+        <div class="pcov"></div>
+        <div class="pavw"><div class="pav2" style="position:relative;" id="prof-av">JD<div class="pvb">✓</div></div></div>
+        <div class="pinf">
+          <div class="pnm" id="prof-name">John Doe</div>
+          <div class="phn">@johndoe · Member since 2024</div>
+          <div class="pbio">Selling quality second-hand items in NYC.</div>
+          <div class="pmt">
+            <div class="pmi"><span>📍</span><span>Brooklyn, New York</span></div>
+            <div class="pmi"><span>⚡</span><span>Replies in &lt; 1 hour</span></div>
+            <div class="pmi"><span>🛡️</span><span>Identity verified</span></div>
+          </div>
+        </div>
+        <div class="pst"><div class="ps2"><span class="psv">24</span><span class="psl">Sold</span></div><div class="ps2"><span class="psv">4.9</span><span class="psl">Rating</span></div><div class="ps2"><span class="psv">98%</span><span class="psl">Response</span></div></div>
+        <div class="rtr"><div class="strs">★★★★★</div><div class="rn">4.9</div><div class="rc">38 reviews</div></div>
+        <div class="pac"><button class="ped" onclick="toast('Edit profile coming soon!')">Edit Profile</button><button class="psh" onclick="doLogout()">Log Out</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="tabs"><div class="tab act" onclick="swTab(this,'listings')">Listings</div><div class="tab" onclick="swTab(this,'purchases')">Purchases</div><div class="tab" onclick="swTab(this,'reviews')">Reviews</div></div>
+      <div class="tbc show" id="tc-listings">
+        <div class="lg2">
+          <div class="lc"><div class="lcimg"><span>📱</span><div class="lsa">Active</div></div><div class="lcb"><div class="lct">iPhone 14 Pro</div><div class="lcp">$649</div><div class="lcv">142 views</div></div></div>
+          <div class="lc"><div class="lcimg"><span>💻</span><div class="lsa">Active</div></div><div class="lcb"><div class="lct">MacBook Air M2</div><div class="lcp">$899</div><div class="lcv">98 views</div></div></div>
+          <div class="lc"><div class="lcimg"><span>🎧</span><div class="lsa lss">Sold</div></div><div class="lcb"><div class="lct">Sony WH-1000XM5</div><div class="lcp">$185</div><div class="lcv">Sold for $185</div></div></div>
+          <div class="lc" style="border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer;" onclick="openSell()"><div style="text-align:center;color:var(--mu);font-size:10px;font-weight:600;">+ Add listing</div></div>
+        </div>
+      </div>
+      <div class="tbc" id="tc-purchases">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="border:1px solid var(--br);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;"><div style="font-size:20px;width:38px;height:38px;background:var(--sf);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🚲</div><div style="flex:1;"><div style="font-size:11px;font-weight:700;">Trek FX3 Road Bike</div><div style="font-size:9px;color:var(--mu);">From Jordan K. · Mar 28</div><div style="height:3px;background:var(--sf);border-radius:2px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:50%;background:var(--g);border-radius:2px;"></div></div></div><div style="text-align:right;"><div style="font-size:13px;font-weight:800;">$520</div><div style="font-size:8px;font-weight:700;background:var(--gl);color:var(--gd);padding:2px 5px;border-radius:3px;margin-top:2px;">Affirm 2/4</div></div></div>
+        </div>
+      </div>
+      <div class="tbc" id="tc-reviews">
+        <div class="revs">
+          <div class="rev"><div class="revt"><div class="rav" style="background:#2e7d32;">JK</div><div><div class="rnm">Jordan K.</div><div class="rdt">Mar 30, 2024</div></div><div class="rst">★★★★★</div></div><div class="rtxt">Super smooth transaction! Item was exactly as described.</div><div class="rprd">📱 iPhone 14 Pro 256GB</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end .body -->
+
+<!-- PRODUCT DETAIL MODAL -->
+<div class="prod-overlay" id="prod-modal">
+  <div class="prod-modal">
+    <button class="prod-close" onclick="closeProd()">✕</button>
+    <div class="prod-left">
+      <div class="prod-img-big" id="prod-img"></div>
+      <div class="prod-img-thumbs" id="prod-thumbs"></div>
+    </div>
+    <div class="prod-right">
+      <div class="prod-badges" id="prod-badges"></div>
+      <div class="prod-title" id="prod-title"></div>
+      <div class="prod-price-row">
+        <div class="prod-price" id="prod-price"></div>
+        <div class="prod-monthly" id="prod-monthly"></div>
+      </div>
+      <div class="prod-desc" id="prod-desc"></div>
+      <div class="prod-seller">
+        <div class="prod-seller-av" id="prod-av"></div>
+        <div>
+          <div class="prod-seller-name" id="prod-sname"></div>
+          <div class="prod-seller-sub" id="prod-ssub"></div>
+          <div class="prod-seller-v">✓ Verified seller</div>
+        </div>
+      </div>
+      <div class="pay-tabs">
+        <button class="pay-tab act" onclick="switchPayTab(this,'affirm')">Affirm</button>
+        <button class="pay-tab" onclick="switchPayTab(this,'klarna')">Klarna</button>
+        <button class="pay-tab" onclick="switchPayTab(this,'afterpay')">Afterpay</button>
+        <button class="pay-tab" onclick="switchPayTab(this,'full')">Full pay</button>
+      </div>
+      <div class="pay-tab-content show" id="ptc-affirm">
+        <div class="affirm-panel">
+          <div class="affirm-logo">Affirm</div>
+          <div class="affirm-amount" id="aff-amount"></div>
+          <div class="affirm-sub">× 4 payments · 0% APR · No hidden fees</div>
+          <div class="affirm-tl" id="aff-tl"></div>
+          <div class="affirm-perks">
+            <div class="affirm-perk"><div class="affirm-perk-icon">🔒</div>0% interest</div>
+            <div class="affirm-perk"><div class="affirm-perk-icon">✅</div>Instant approval</div>
+            <div class="affirm-perk"><div class="affirm-perk-icon">💳</div>No hard check</div>
+          </div>
+        </div>
+      </div>
+      <div class="pay-tab-content" id="ptc-klarna">
+        <div class="klarna-panel">
+          <div class="klarna-logo">Klarna</div>
+          <div class="klarna-opts">
+            <div class="klarna-opt act" onclick="selKlarna(this)"><div class="klarna-opt-label">Weekly</div><div class="klarna-opt-sub" id="kl-weekly"></div></div>
+            <div class="klarna-opt" onclick="selKlarna(this)"><div class="klarna-opt-label">Monthly</div><div class="klarna-opt-sub" id="kl-monthly"></div></div>
+            <div class="klarna-opt" onclick="selKlarna(this)"><div class="klarna-opt-label">30 days</div><div class="klarna-opt-sub">Pay later</div></div>
+          </div>
+          <div class="klarna-info">Pay on your schedule. Always interest-free on short plans. Klarna Buyer Protection included.</div>
+        </div>
+      </div>
+      <div class="pay-tab-content" id="ptc-afterpay">
+        <div class="afterpay-panel">
+          <div class="afterpay-logo">Afterpay</div>
+          <div class="afterpay-grid" id="ap-grid"></div>
+          <div class="afterpay-first">First payment due today · Always interest-free</div>
+        </div>
+      </div>
+      <div class="pay-tab-content" id="ptc-full">
+        <div class="fullpay-panel">
+          <div class="fullpay-price" id="fp-price"></div>
+          <div class="fullpay-sub">One-time payment · No fees · Instant confirmation</div>
+          <div class="fullpay-perks">
+            <div class="fullpay-perk"><div class="fullpay-perk-icon">⚡</div>Instant order confirmation</div>
+            <div class="fullpay-perk"><div class="fullpay-perk-icon">🔒</div>Secure payment processing</div>
+            <div class="fullpay-perk"><div class="fullpay-perk-icon">↩️</div>Easy returns if not as described</div>
+          </div>
+        </div>
+      </div>
+      <div class="prod-cta">
+        <button class="prod-buy" onclick="buyNow()">Buy Now</button>
+        <button class="prod-msg" onclick="goScr('messages');closeProd()">💬</button>
+        <button class="prod-save-btn" id="prod-save-icon" onclick="toggleSave()">🤍</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SELL MODAL -->
+<div class="sell-wrap" id="smod">
+  <div class="sbox">
+    <div class="sell-head">
+      <div class="sell-title">List an item</div>
+      <button class="xb" onclick="closeSell()">✕</button>
+    </div>
+    <div class="sell-body">
+      <div class="upl" onclick="toast('Photo upload: select from your device')">
+        <div class="upl-icon">📷</div>
+        <div class="upl-text">Add photos</div>
+        <div class="upl-sub">Tap to upload · Max 10 photos</div>
+      </div>
+      <div class="sell-err" id="sell-err"></div>
+      <div class="fgroup">
+        <label class="fl2">Title</label>
+        <input class="fi2" type="text" id="sell-title" placeholder="e.g. iPhone 14 Pro 256GB Space Black">
+      </div>
+      <div class="fgroup">
+        <label class="fl2">Description</label>
+        <textarea class="fi2" id="sell-desc" rows="3" placeholder="Condition, what's included, any defects..."></textarea>
+      </div>
+      <div class="form-row2">
+        <div class="fgroup">
+          <label class="fl2">Price ($)</label>
+          <input class="fi2" type="number" id="sell-price" placeholder="0" min="1">
+        </div>
+        <div class="fgroup">
+          <label class="fl2">Category</label>
+          <select class="fi2" id="sell-cat">
+            <option value="">Select category...</option>
+            <optgroup label="Electronics">
+              <option value="phones">📱 Phones</option>
+              <option value="laptops">💻 Laptops &amp; Computers</option>
+              <option value="audio">🎧 Audio &amp; Headphones</option>
+              <option value="cameras">📸 Cameras</option>
+              <option value="gaming">🎮 Gaming</option>
+            </optgroup>
+            <optgroup label="Vehicles">
+              <option value="cars">🚗 Cars</option>
+              <option value="motorcycles">🏍️ Motorcycles</option>
+              <option value="bicycles">🚲 Bicycles</option>
+              <option value="scooters">🛴 Scooters &amp; E-bikes</option>
+            </optgroup>
+            <optgroup label="Home &amp; Garden">
+              <option value="furniture">🛋️ Furniture</option>
+              <option value="appliances">🍳 Appliances</option>
+              <option value="tools">🔧 Tools &amp; Hardware</option>
+            </optgroup>
+            <optgroup label="Sports &amp; Outdoors">
+              <option value="fitness">🏋️ Fitness Equipment</option>
+              <option value="outdoor">🏕️ Outdoor &amp; Camping</option>
+              <option value="sports">⚽ Sports Gear</option>
+            </optgroup>
+            <optgroup label="Fashion">
+              <option value="mens">👔 Men's Clothing</option>
+              <option value="womens">👗 Women's Clothing</option>
+              <option value="shoes">👟 Shoes</option>
+              <option value="bags">👜 Bags &amp; Accessories</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="books">📚 Books &amp; Media</option>
+              <option value="toys">🧸 Toys &amp; Kids</option>
+              <option value="art">🎨 Art &amp; Collectibles</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <div class="form-row2">
+        <div class="fgroup">
+          <label class="fl2">Condition</label>
+          <select class="fi2" id="sell-cond">
+            <option value="Like New">Like New</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="For Parts">For Parts</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label class="fl2">Location</label>
+          <input class="fi2" type="text" id="sell-loc" placeholder="e.g. Brooklyn, NY">
+        </div>
+      </div>
+      <div class="bnpl-toggle">
+        <div>
+          <div class="bnpl-toggle-t">⚡ Enable BNPL payments</div>
+          <div class="bnpl-toggle-s">Let buyers pay with Affirm, Klarna &amp; Afterpay</div>
+        </div>
+        <div class="toggle-sw"></div>
+      </div>
+      <button class="sell-submit" onclick="submitListing()">Post Listing</button>
+    </div>
+  </div>
+</div>
+
+<!-- OFFER MODAL -->
+<div class="offer-wrap" id="ofmod">
+  <div class="ofmbox">
+    <div class="ofmtop"><div class="ofmtit">Make an offer</div><button class="xb" onclick="closeOfm()">✕</button></div>
+    <div style="font-size:11px;color:var(--mu);margin-bottom:12px;">Suggest a fair price to the seller.</div>
+    <div class="ofmiu"><span style="font-size:20px;font-weight:800;">$</span><input class="ofmin" type="number" placeholder="550" id="ofamt"></div>
+    <div style="font-size:9px;color:var(--mu);margin-bottom:14px;">The seller will accept, decline, or counter your offer.</div>
+    <div style="display:flex;gap:8px;"><button class="bm" onclick="closeOfm()">Cancel</button><button class="bb" onclick="sendOffer()">Send Offer</button></div>
+  </div>
+</div>
+
+<!-- AI HELP MODAL -->
+<div class="ai-modal" id="ai-modal">
+  <div class="ai-box">
+    <div class="ai-head">
+      <div class="ai-head-ic">✨</div>
+      <div><div class="ai-head-title">FlexBuy AI Assistant</div><div class="ai-head-sub">Ask me anything about buying, selling, or payments</div></div>
+      <button class="ai-close" onclick="closeAI()">✕</button>
+    </div>
+    <div class="ai-msgs" id="ai-msgs">
+      <div class="ai-msg bot">
+        <div class="ai-av-ic bot">✨</div>
+        <div class="ai-bbl">Hi! I can help you with buying, selling, payment options, and more. What would you like to know?</div>
+      </div>
+    </div>
+    <div class="ai-sugs" id="ai-sugs">
+      <div class="ai-sug" onclick="askAI(this,'How does Affirm work?')">How does Affirm work?</div>
+      <div class="ai-sug" onclick="askAI(this,'How do I list an item?')">How do I list an item?</div>
+      <div class="ai-sug" onclick="askAI(this,'Is it safe to buy here?')">Is it safe?</div>
+      <div class="ai-sug" onclick="askAI(this,'What are the fees?')">What are the fees?</div>
+    </div>
+    <div class="ai-inp-row">
+      <input type="text" class="ai-inp" id="ai-input" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter')sendAI()">
+      <button class="ai-send" onclick="sendAI()">↑</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastel"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+var DATA = [
+  {id:1,e:'📱',t:'iPhone 14 Pro 256GB',p:649,loc:'Brooklyn, NY',cond:'Like New',cat:'phones',desc:'Space Black. Original box and charger. Battery health 94%. No scratches.',sn:'Alex M.',sr:'4.9 (38 reviews)',sc:12},
+  {id:2,e:'🚲',t:'Trek FX3 Road Bike',p:520,loc:'Manhattan, NY',cond:'Good',cat:'bicycles',desc:'2022 model. Hydraulic disc brakes, 24-speed. New tires 2 months ago.',sn:'Jordan K.',sr:'5.0 (14 reviews)',sc:5},
+  {id:3,e:'💻',t:'MacBook Air M2 8GB',p:899,loc:'Hoboken, NJ',cond:'Like New',cat:'laptops',desc:'Midnight. AppleCare until 2026. Used 6 months. Includes sleeve.',sn:'Priya S.',sr:'4.8 (9 reviews)',sc:3},
+  {id:4,e:'🛋️',t:'West Elm Leather Sofa',p:780,loc:'Queens, NY',cond:'Good',cat:'furniture',desc:'Caramel 3-seater. Minor armrest wear. Pickup this weekend.',sn:'Marcus T.',sr:'4.7 (52 reviews)',sc:21},
+  {id:5,e:'🎧',t:'Sony WH-1000XM5',p:199,loc:'Jersey City, NJ',cond:'Like New',cat:'audio',desc:'4 months old. ANC perfect. Case and cables included.',sn:'Lena W.',sr:'5.0 (22 reviews)',sc:8},
+  {id:6,e:'🏋️',t:'Bowflex 552 Dumbbells',p:299,loc:'Astoria, NY',cond:'Good',cat:'fitness',desc:'Adjustable 5-52.5 lbs each. Pickup only.',sn:'Chris R.',sr:'4.9 (18 reviews)',sc:7},
+  {id:7,e:'📸',t:'Sony A7III Camera',p:1200,loc:'Manhattan, NY',cond:'Like New',cat:'cameras',desc:'Body only. Shutter count under 5000. Original box.',sn:'Dana M.',sr:'4.9 (11 reviews)',sc:4},
+  {id:8,e:'🪑',t:'Herman Miller Aeron',p:650,loc:'Brooklyn, NY',cond:'Good',cat:'furniture',desc:'Size B. Fully adjustable. Minor base scuffs. Works perfectly.',sn:'Tom B.',sr:'4.8 (7 reviews)',sc:6},
+];
+
+var MDATA = [
+  {id:1,e:'📱',t:'iPhone 14 Pro 256GB',p:649,s:'Alex M.',d:'0.3 mi',c:'Like New',cat:'phones'},
+  {id:2,e:'🚲',t:'Trek FX3 Road Bike',p:520,s:'Jordan K.',d:'0.5 mi',c:'Good',cat:'bicycles'},
+  {id:3,e:'💻',t:'MacBook Air M2',p:899,s:'Priya S.',d:'0.7 mi',c:'Like New',cat:'laptops'},
+  {id:4,e:'🛋️',t:'West Elm Leather Sofa',p:780,s:'Marcus T.',d:'0.9 mi',c:'Good',cat:'furniture'},
+  {id:5,e:'🎧',t:'Sony WH-1000XM5',p:199,s:'Lena W.',d:'1.1 mi',c:'Like New',cat:'audio'},
+  {id:6,e:'🏋️',t:'Bowflex 552 Dumbbells',p:299,s:'Chris R.',d:'1.3 mi',c:'Good',cat:'fitness'},
+  {id:7,e:'📸',t:'Sony A7III Camera',p:1200,s:'Dana M.',d:'1.6 mi',c:'Like New',cat:'cameras'},
+  {id:8,e:'🪑',t:'Herman Miller Aeron',p:650,s:'Tom B.',d:'1.8 mi',c:'Good',cat:'furniture'},
+];
+
+var CONVOS = [
+  {av:'AM',col:'#1a1a2e',nm:'Alex M.',e:'📱',t:'iPhone 14 Pro 256GB',p:'$649',c:'Like New · Brooklyn, NY',msgs:[{mine:false,text:'Hey! Is the iPhone still available?',time:'10:02 AM'},{mine:true,text:'Yes! Just listed it yesterday.',time:'10:05 AM'},{mine:false,text:'Battery health?',time:'10:06 AM'},{mine:true,text:'94% — barely used.',time:'10:08 AM'}],unread:true},
+  {av:'JK',col:'#2e7d32',nm:'Jordan K.',e:'🚲',t:'Trek FX3 Road Bike',p:'$520',c:'Good · Manhattan, NY',msgs:[{mine:false,text:'Would you take $480?',time:'9:15 AM',offer:480},{mine:true,text:"I can do $500 — that's my lowest.",time:'9:22 AM'},{mine:false,text:'Deal! When can I pick it up?',time:'9:25 AM'}],unread:true},
+  {av:'PS',col:'#6a1b9a',nm:'Priya S.',e:'💻',t:'MacBook Air M2 8GB',p:'$899',c:'Like New · Hoboken, NJ',msgs:[{mine:false,text:'Hi! Is the MacBook available?',time:'Yesterday'},{mine:true,text:'Yes! Perfect condition.',time:'Yesterday'},{mine:false,text:"I'll pick it up tomorrow!",time:'3h ago'}],unread:false},
+];
+
+var BNPL = {
+  affirm:{cls:'affirm',name:'Affirm',logo:'Affirm',tagline:'Pay over time, interest-free.',sub:'Split any purchase into 4 equal payments. 0% APR, no hidden fees.',features:[{icon:'🔒',t:'0% APR',s:'No interest ever. What you see is what you pay.'},{icon:'📅',t:'Flexible schedule',s:'Pay every 2 weeks. First payment due today.'},{icon:'✅',t:'Instant approval',s:'Soft credit check only. No score impact.'}],steps:[{t:'Select Affirm at checkout',s:'Choose Affirm when buying on FlexBuy.'},{t:'Get instant approval',s:'Soft credit check — takes under 60 seconds.'},{t:'Pay in 4 installments',s:'First payment today, then every 2 weeks.'}],faq:[{q:'Does Affirm affect my credit score?',a:'Affirm does a soft credit check which does not affect your score.'},{q:'What if I miss a payment?',a:'Affirm sends reminders before your due date. Late payments may incur fees.'},{q:'Can I pay off early?',a:'Yes! You can pay off early with no prepayment penalties.'}]},
+  klarna:{cls:'klarna',name:'Klarna',logo:'Klarna',tagline:'Shop now. Pay when you want.',sub:'Pay in 30 days, or spread payments weekly or monthly.',features:[{icon:'🗓️',t:'Pay in 30 days',s:'Try before you pay. No interest if paid in full.'},{icon:'📆',t:'Monthly payments',s:'Spread costs over 6-24 months.'},{icon:'⚡',t:'Weekly splits',s:'Split into weekly micro-payments.'}],steps:[{t:'Choose Klarna at checkout',s:'Select Klarna and pick your payment schedule.'},{t:'Pick your plan',s:'Pay in 30 days, monthly, or weekly.'},{t:'Shop with confidence',s:'Klarna Buyer Protection covers your purchase.'}],faq:[{q:'What is Pay in 30 days?',a:'You get 30 days to pay after purchase. No interest if paid on time.'},{q:'Is there interest on monthly payments?',a:'Monthly plans may include interest — shown clearly before confirming.'},{q:'What is Klarna Buyer Protection?',a:"If your item doesn't arrive or is not as described, Klarna helps you get a refund."}]},
+  afterpay:{cls:'afterpay',name:'Afterpay',logo:'Afterpay',tagline:'Always interest-free. Always.',sub:'Split into 4 equal payments, due every 2 weeks.',features:[{icon:'💚',t:'Always interest-free',s:"No interest. Ever."},{icon:'🔄',t:'4 biweekly payments',s:'Pay 25% today, then every 2 weeks.'},{icon:'📱',t:'Manage in-app',s:'Track payments and get reminders.'}],steps:[{t:'Select Afterpay at checkout',s:"Choose Afterpay when you're ready to buy."},{t:'Pay 25% today',s:'First installment due immediately.'},{t:'Auto-payments every 2 weeks',s:'Afterpay handles the rest on your linked card.'}],faq:[{q:'What if I return my item?',a:'Afterpay will cancel or adjust your remaining payments automatically.'},{q:'Is there a spending limit?',a:'Limits increase as you build a history of on-time payments.'},{q:'Which cards are accepted?',a:'Visa, Mastercard, and debit cards. Prepaid cards not accepted.'}]}
+};
+
+var AI_RESP = {
+  'how does affirm work':'Affirm splits your purchase into 4 equal payments at 0% APR. First payment today, then every 2 weeks. No hidden fees, instant soft-credit approval! 🔒',
+  'how do i list an item':"Click '+ Sell' in the top bar. Add photos, fill in title, price, description, category, condition and location. Enable BNPL so buyers can pay with Affirm, Klarna or Afterpay. Hit Post Listing — you're live! 📸",
+  'is it safe to buy here':'Yes! FlexBuy has Buyer Protection on all purchases. Sellers are identity-verified and all payments are secure. If an item is not as described, you are covered. 🛡️',
+  'what are the fees':'FlexBuy is free for buyers. Sellers pay a small fee only when an item sells. BNPL payments have no extra fees. 💚',
+  'default':'Happy to help! You can ask me about Affirm, Klarna, Afterpay, how to list items, buyer protection, fees, or anything else about FlexBuy. ✨'
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────
+var sbOpen = true;
+var loggedIn = false;
+var curUser = {name:'John Doe', initials:'JD'};
+var savedIds = [];
+var curProdId = null;
+var curPayTab = 'affirm';
+var curConv = 0;
+var mActiveId = null;
+var userListings = []; // listings created by the user
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+function goScr(name, arg) {
+  if (name === 'bnpl') { renderBNPL(arg); }
+  document.querySelectorAll('.scr, .login-scr').forEach(function(s){ s.classList.remove('act'); });
+  var el = document.getElementById('scr-' + name);
+  if (el) el.classList.add('act');
+  // sidebar highlights
+  document.querySelectorAll('.sbi[id^="nav-"]').forEach(function(i){ i.classList.remove('act'); });
+  var navEl = document.getElementById('nav-' + name);
+  if (navEl) navEl.classList.add('act');
+  if (name === 'messages') initMsgs();
+  if (name === 'map') initMapList();
+  if (name === 'saved') renderSaved();
+}
+
+function toggleSb() {
+  sbOpen = !sbOpen;
+  document.getElementById('sb').classList.toggle('closed', !sbOpen);
+}
+
+// ── SIDEBAR CATEGORY ACCORDION ────────────────────────────────────────
+function toggleSbCat(head, id) {
+  var items = document.getElementById(id);
+  var arrow = head.querySelector('.sb-cat-arrow');
+  var open = items.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open', open);
+}
+
+function filterAndGo(cat, label) {
+  goScr('home');
+  document.querySelectorAll('.cat').forEach(function(c){ c.classList.remove('act'); });
+  document.getElementById('grid-title').textContent = label;
+  document.getElementById('grid-clear').textContent = 'Clear ×';
+  document.getElementById('grid-clear').onclick = clearFilter;
+  var res = DATA.filter(function(d){ return d.cat === cat; });
+  if (res.length === 0) {
+    document.getElementById('grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu);"><div style="font-size:36px;margin-bottom:10px;">📭</div><div style="font-size:14px;font-weight:700;margin-bottom:4px;">No listings in this category yet</div></div>';
+  } else {
+    renderCards(res);
+  }
+}
+
+// ── HOME GRID ─────────────────────────────────────────────────────────
+function renderGrid(filter) {
+  var items = filter === 'all' ? DATA.concat(userListings) : DATA.concat(userListings).filter(function(d){ return d.cat === filter; });
+  renderCards(items);
+}
+
+function renderCards(items) {
+  document.getElementById('grid').innerHTML = items.map(function(d){
+    var saved = savedIds.indexOf(d.id) > -1;
+    return '<div class="card" onclick="openProd(' + d.id + ')">'
+      + '<div class="cimg"><span>' + d.e + '</span>'
+      + '<div class="bt">BNPL</div>'
+      + '<button class="save-btn-card" onclick="event.stopPropagation();toggleSaveCard(' + d.id + ',this)">' + (saved ? '❤️' : '🤍') + '</button>'
+      + '</div>'
+      + '<div class="cbody"><div class="ct">' + d.t + '</div>'
+      + '<div class="cl">📍 ' + d.loc + '</div>'
+      + '<div class="cp">$' + d.p.toLocaleString() + '</div>'
+      + '<div class="cm">or $' + (d.p/4).toFixed(2) + '/mo with Affirm</div></div></div>';
+  }).join('');
+}
+
+function fCat(el, f) {
+  document.querySelectorAll('.cat').forEach(function(c){ c.classList.remove('act'); });
+  el.classList.add('act');
+  clearFilter(true);
+  renderGrid(f);
+}
+
+function clearFilter(silent) {
+  document.getElementById('grid-title').textContent = 'Listings near you';
+  document.getElementById('grid-clear').textContent = 'View all →';
+  document.getElementById('grid-clear').onclick = null;
+  document.getElementById('search-input').value = '';
+  if (!silent) {
+    document.querySelectorAll('.cat')[0].classList.add('act');
+    document.querySelectorAll('.cat').forEach(function(c,i){ if(i>0)c.classList.remove('act'); });
+    renderGrid('all');
+  }
+}
+
+// ── SEARCH ────────────────────────────────────────────────────────────
+function onSearch(q) {
+  var box = document.getElementById('search-results');
+  if (!q || !q.trim()) { box.classList.remove('show'); return; }
+  var q2 = q.toLowerCase();
+  var all = DATA.concat(userListings);
+  var res = all.filter(function(d){
+    return d.t.toLowerCase().indexOf(q2) > -1
+      || d.cat.toLowerCase().indexOf(q2) > -1
+      || d.loc.toLowerCase().indexOf(q2) > -1
+      || d.desc.toLowerCase().indexOf(q2) > -1;
+  });
+  if (!res.length) {
+    box.innerHTML = '<div class="sr-empty">No results for "' + q + '"</div>';
+  } else {
+    box.innerHTML = res.map(function(d){
+      return '<div class="sr-item" onclick="openProd(' + d.id + ');hideSearch()">'
+        + '<div class="sr-em">' + d.e + '</div>'
+        + '<div><div class="sr-t">' + d.t + '</div>'
+        + '<div class="sr-p">$' + d.p.toLocaleString() + '</div>'
+        + '<div class="sr-l">📍 ' + d.loc + ' · ' + d.cond + '</div></div></div>';
+    }).join('');
+  }
+  box.classList.add('show');
+}
+
+function hideSearch() { document.getElementById('search-results').classList.remove('show'); }
+
+function doSearch(q) {
+  hideSearch();
+  document.getElementById('search-input').blur();
+  if (!q || !q.trim()) { renderGrid('all'); return; }
+  var q2 = q.toLowerCase();
+  var all = DATA.concat(userListings);
+  var res = all.filter(function(d){
+    return d.t.toLowerCase().indexOf(q2) > -1
+      || d.cat.toLowerCase().indexOf(q2) > -1
+      || d.loc.toLowerCase().indexOf(q2) > -1
+      || d.desc.toLowerCase().indexOf(q2) > -1;
+  });
+  // Switch to home
+  document.querySelectorAll('.scr, .login-scr').forEach(function(s){ s.classList.remove('act'); });
+  document.getElementById('scr-home').classList.add('act');
+  document.querySelectorAll('.cat').forEach(function(c){ c.classList.remove('act'); });
+  var sht = document.getElementById('grid-title');
+  var sha = document.getElementById('grid-clear');
+  sht.textContent = res.length + ' result' + (res.length !== 1 ? 's' : '') + ' for "' + q + '"';
+  sha.textContent = 'Clear ×';
+  sha.onclick = function(){ clearFilter(); };
+  if (!res.length) {
+    document.getElementById('grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu);"><div style="font-size:36px;margin-bottom:10px;">🔍</div><div style="font-size:14px;font-weight:700;margin-bottom:6px;">No listings found</div><div style="font-size:12px;">Try a different search term</div></div>';
+  } else {
+    renderCards(res);
+  }
+}
+
+// ── SAVED ─────────────────────────────────────────────────────────────
+function toggleSaveCard(id, btn) {
+  var idx = savedIds.indexOf(id);
+  if (idx > -1) { savedIds.splice(idx, 1); btn.textContent = '🤍'; toast('Removed from saved'); }
+  else { savedIds.push(id); btn.textContent = '❤️'; toast('Saved! ❤️'); }
+}
+
+function toggleSave() {
+  if (!curProdId) return;
+  var btn = document.getElementById('prod-save-icon');
+  var idx = savedIds.indexOf(curProdId);
+  if (idx > -1) { savedIds.splice(idx, 1); btn.textContent = '🤍'; toast('Removed from saved'); }
+  else { savedIds.push(curProdId); btn.textContent = '❤️'; toast('Saved! ❤️'); }
+  renderGrid('all');
+}
+
+function renderSaved() {
+  var all = DATA.concat(userListings);
+  var items = all.filter(function(d){ return savedIds.indexOf(d.id) > -1; });
+  var empty = document.getElementById('saved-empty');
+  var grid = document.getElementById('saved-grid');
+  var cnt = document.getElementById('saved-count');
+  cnt.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  if (!items.length) { empty.style.display = 'block'; grid.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = items.map(function(d){
+    return '<div class="card" onclick="openProd(' + d.id + ')">'
+      + '<div class="cimg"><span>' + d.e + '</span><div class="bt">BNPL</div></div>'
+      + '<div class="cbody"><div class="ct">' + d.t + '</div>'
+      + '<div class="cl">📍 ' + d.loc + '</div>'
+      + '<div class="cp">$' + d.p.toLocaleString() + '</div>'
+      + '<div class="cm">or $' + (d.p/4).toFixed(2) + '/mo with Affirm</div></div></div>';
+  }).join('');
+}
+
+// ── LOGIN / AUTH ───────────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.login-tab').forEach(function(el){ el.classList.remove('act'); });
+  document.getElementById('tab-' + t).classList.add('act');
+  document.querySelectorAll('.form-block').forEach(function(el){ el.classList.remove('act'); });
+  document.getElementById('form-' + t).classList.add('act');
+}
+
+function showForgot(show) {
+  document.getElementById('forgot-panel').style.display = show ? 'block' : 'none';
+  document.getElementById('main-auth').style.display = show ? 'none' : 'block';
+}
+
+function doForgot() {
+  var email = document.getElementById('forgot-email').value;
+  if (!email) { toast('Please enter your email'); return; }
+  showForgot(false);
+  toast('Password reset link sent to ' + email + '!');
+}
+
+function doGoogleLogin() { setLoggedIn('Google User', 'GU'); goScr('home'); toast('Signed in with Google! 👋'); }
+function doAppleLogin()  { setLoggedIn('Apple User', 'AU'); goScr('home'); toast('Signed in with Apple! 👋'); }
+
+function doSignIn() {
+  var email = document.getElementById('signin-email').value;
+  var pass  = document.getElementById('signin-pass').value;
+  if (!email) { toast('Please enter your email'); return; }
+  if (!pass)  { toast('Please enter your password'); return; }
+  var name = email.split('@')[0];
+  setLoggedIn(name, name.substring(0,2).toUpperCase());
+  goScr('home');
+  toast('Welcome back! 👋');
+}
+
+function doSignUp() {
+  var first = document.getElementById('su-first').value.trim();
+  var last  = document.getElementById('su-last').value.trim();
+  var email = document.getElementById('su-email').value.trim();
+  var pass  = document.getElementById('su-pass').value;
+  var loc   = document.getElementById('su-loc').value.trim();
+  if (!first || !last) { toast('Please enter your name'); return; }
+  if (!email) { toast('Please enter your email'); return; }
+  if (!pass || pass.length < 8) { toast('Password must be at least 8 characters'); return; }
+  setLoggedIn(first + ' ' + last, (first[0] + last[0]).toUpperCase());
+  goScr('home');
+  toast('Welcome to FlexBuy, ' + first + '! 🎉');
+}
+
+function setLoggedIn(name, initials) {
+  loggedIn = true;
+  curUser = {name: name, initials: initials};
+  document.getElementById('signin-btn').style.display = 'none';
+  var av = document.getElementById('user-av');
+  av.classList.add('show');
+  av.textContent = initials;
+  var pnm = document.getElementById('prof-name');
+  if (pnm) pnm.textContent = name;
+  var pav = document.getElementById('prof-av');
+  if (pav) { pav.innerHTML = initials + '<div class="pvb">✓</div>'; }
+}
+
+function doLogout() {
+  loggedIn = false;
+  document.getElementById('signin-btn').style.display = '';
+  document.getElementById('user-av').classList.remove('show');
+  goScr('home');
+  toast('Signed out successfully');
+}
+
+// ── PRODUCT MODAL ─────────────────────────────────────────────────────
+function openProd(id) {
+  var all = DATA.concat(userListings);
+  var d = all.find(function(x){ return x.id === id; });
+  if (!d) return;
+  curProdId = id; curPayTab = 'affirm';
+  document.getElementById('prod-img').textContent = d.e;
+  var alts = ['📦','🔋','📸','🎁'];
+  document.getElementById('prod-thumbs').innerHTML = '<div class="prod-thumb act">' + d.e + '</div>'
+    + alts.slice(0,3).map(function(a){ return '<div class="prod-thumb" onclick="swapImg(this,\'' + a + '\')">' + a + '</div>'; }).join('');
+  document.getElementById('prod-badges').innerHTML = '<span class="prod-bdg bdg-cond">' + d.cond + '</span><span class="prod-bdg bdg-loc">📍 ' + d.loc + '</span><span class="prod-bdg bdg-bnpl">⚡ BNPL available</span>';
+  document.getElementById('prod-title').textContent = d.t;
+  document.getElementById('prod-price').textContent = '$' + d.p.toLocaleString();
+  document.getElementById('prod-monthly').textContent = 'or $' + (d.p/4).toFixed(2) + '/mo';
+  document.getElementById('prod-desc').textContent = d.desc;
+  document.getElementById('prod-av').textContent = d.sn.split(' ').map(function(w){ return w[0]; }).join('');
+  document.getElementById('prod-sname').textContent = d.sn;
+  document.getElementById('prod-ssub').textContent = '★★★★★ ' + d.sr + ' · ' + d.sc + ' listings';
+  // Affirm
+  var today = new Date(); var amt = (d.p/4).toFixed(2); var tl = '';
+  for (var i=0; i<4; i++) { var dt = new Date(today); dt.setDate(dt.getDate()+i*14); tl += '<div class="affirm-tl-i"><div class="affirm-dot' + (i===0?' now':'') + '"></div><div class="affirm-tl-a">$' + amt + '</div><div class="affirm-tl-d">' + dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div></div>'; }
+  document.getElementById('aff-tl').innerHTML = tl;
+  document.getElementById('aff-amount').textContent = '$' + amt;
+  // Klarna
+  document.getElementById('kl-weekly').textContent = '$' + (d.p/8).toFixed(2) + '/wk';
+  document.getElementById('kl-monthly').textContent = '$' + (d.p/3).toFixed(2) + '/mo';
+  // Afterpay
+  var apAmt = (d.p/4).toFixed(2); var ap = '';
+  for (var j=0; j<4; j++) { var dt2 = new Date(today); dt2.setDate(dt2.getDate()+j*14); ap += '<div class="afterpay-item"><div class="afterpay-item-n">Payment ' + (j+1) + '</div><div class="afterpay-item-a">$' + apAmt + '</div><div class="afterpay-item-d">' + dt2.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div></div>'; }
+  document.getElementById('ap-grid').innerHTML = ap;
+  document.getElementById('fp-price').textContent = '$' + d.p.toLocaleString();
+  // Save icon
+  document.getElementById('prod-save-icon').textContent = savedIds.indexOf(id) > -1 ? '❤️' : '🤍';
+  // Reset tabs
+  document.querySelectorAll('.pay-tab').forEach(function(t){ t.classList.remove('act'); });
+  document.querySelectorAll('.pay-tab-content').forEach(function(t){ t.classList.remove('show'); });
+  document.querySelector('.pay-tab').classList.add('act');
+  document.getElementById('ptc-affirm').classList.add('show');
+  document.getElementById('prod-modal').classList.add('open');
+}
+
+function closeProd() { document.getElementById('prod-modal').classList.remove('open'); }
+function swapImg(el, em) { document.querySelectorAll('.prod-thumb').forEach(function(t){ t.classList.remove('act'); }); el.classList.add('act'); document.getElementById('prod-img').textContent = em; }
+function switchPayTab(el, tab) { document.querySelectorAll('.pay-tab').forEach(function(t){ t.classList.remove('act'); }); document.querySelectorAll('.pay-tab-content').forEach(function(t){ t.classList.remove('show'); }); el.classList.add('act'); document.getElementById('ptc-' + tab).classList.add('show'); curPayTab = tab; }
+function selKlarna(el) { document.querySelectorAll('.klarna-opt').forEach(function(o){ o.classList.remove('act'); }); el.classList.add('act'); }
+
+function buyNow() {
+  if (!loggedIn) { closeProd(); goScr('login'); toast('Please sign in to buy'); return; }
+  var labels = {affirm:'Affirm', klarna:'Klarna', afterpay:'Afterpay', full:'full payment'};
+  closeProd();
+  toast('Order placed with ' + labels[curPayTab] + '! 🎉');
+}
+
+// ── SELL ──────────────────────────────────────────────────────────────
+function openSell() {
+  if (!loggedIn) { goScr('login'); toast('Please sign in to list an item'); return; }
+  document.getElementById('smod').classList.add('open');
+}
+function closeSell() { document.getElementById('smod').classList.remove('open'); }
+
+function submitListing() {
+  var title = document.getElementById('sell-title').value.trim();
+  var price = parseFloat(document.getElementById('sell-price').value);
+  var cat   = document.getElementById('sell-cat').value;
+  var cond  = document.getElementById('sell-cond').value;
+  var loc   = document.getElementById('sell-loc').value.trim();
+  var desc  = document.getElementById('sell-desc').value.trim();
+  var errEl = document.getElementById('sell-err');
+
+  if (!title) { showErr('Please enter a title for your listing'); return; }
+  if (!price || price <= 0) { showErr('Please enter a valid price'); return; }
+  if (!cat)   { showErr('Please select a category'); return; }
+  if (!loc)   { showErr('Please enter your location'); return; }
+
+  errEl.classList.remove('show');
+
+  // Emojis by category
+  var emojiMap = {phones:'📱',laptops:'💻',audio:'🎧',cameras:'📸',gaming:'🎮',cars:'🚗',motorcycles:'🏍️',bicycles:'🚲',scooters:'🛴',furniture:'🛋️',appliances:'🍳',tools:'🔧',fitness:'🏋️',outdoor:'🏕️',sports:'⚽',mens:'👔',womens:'👗',shoes:'👟',bags:'👜',books:'📚',toys:'🧸',art:'🎨'};
+  var newId = Date.now();
+  var newListing = {
+    id: newId,
+    e: emojiMap[cat] || '📦',
+    t: title,
+    p: price,
+    loc: loc,
+    cond: cond,
+    cat: cat,
+    desc: desc || 'No description provided.',
+    sn: curUser.name,
+    sr: '5.0 (new seller)',
+    sc: 0
+  };
+  userListings.push(newListing);
+
+  // Reset form
+  document.getElementById('sell-title').value = '';
+  document.getElementById('sell-price').value = '';
+  document.getElementById('sell-cat').value = '';
+  document.getElementById('sell-loc').value = '';
+  document.getElementById('sell-desc').value = '';
+
+  closeSell();
+  renderGrid('all');
+  toast('Listing posted! 🎉 "' + title + '" is now live.');
+}
+
+function showErr(msg) {
+  var el = document.getElementById('sell-err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// ── BNPL INFO PAGE ────────────────────────────────────────────────────
+function renderBNPL(provider) {
+  var d = BNPL[provider]; if (!d) return;
+  var today = new Date();
+  var tlItems = provider === 'klarna' ? 3 : 4;
+  var amt = (500/tlItems).toFixed(2);
+  var interval = provider === 'klarna' ? 30 : 14;
+  var tlHtml = '<div class="bnpl-tl">';
+  for (var i=0; i<tlItems; i++) { var dt = new Date(today); dt.setDate(dt.getDate()+i*interval); tlHtml += '<div class="bnpl-tl-i"><div class="bnpl-tl-dot' + (i===0?' now':'') + '"></div><div class="bnpl-tl-a">$' + amt + '</div><div class="bnpl-tl-d">' + dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div>' + (i===0?'<div class="bnpl-tl-l">Today</div>':'') + '</div>'; }
+  tlHtml += '</div>';
+  document.getElementById('bnpl-content').innerHTML = '<button class="bnpl-back" onclick="goScr(\'home\')">← Back to home</button>'
+    + '<div class="bnpl-hero ' + d.cls + '"><div class="bnpl-logo-big">' + d.logo + '</div><div class="bnpl-tagline">' + d.tagline + '</div><div class="bnpl-sub">' + d.sub + '</div></div>'
+    + '<div class="bnpl-cards">' + d.features.map(function(f){ return '<div class="bnpl-card"><div class="bnpl-card-icon">' + f.icon + '</div><div class="bnpl-card-t">' + f.t + '</div><div class="bnpl-card-s">' + f.s + '</div></div>'; }).join('') + '</div>'
+    + '<div class="bnpl-steps"><div class="bnpl-steps-t">How it works</div>' + d.steps.map(function(s,i){ return '<div class="bnpl-step"><div class="bnpl-step-num">' + (i+1) + '</div><div><div class="bnpl-step-t">' + s.t + '</div><div class="bnpl-step-s">' + s.s + '</div></div></div>'; }).join('') + '</div>'
+    + '<div style="font-size:12px;font-weight:700;margin-bottom:12px;">Example: $500 purchase</div>' + tlHtml
+    + '<div style="font-size:12px;font-weight:700;margin-bottom:10px;">FAQ</div>'
+    + '<div class="bnpl-faq">' + d.faq.map(function(f,i){ return '<div class="bnpl-faq-i"><div class="bnpl-faq-q" onclick="toggleFaq(' + i + ')">' + f.q + ' <span id="fa' + i + '">▼</span></div><div class="bnpl-faq-a" id="fa-a' + i + '">' + f.a + '</div></div>'; }).join('') + '</div>'
+    + '<div style="height:14px;"></div>'
+    + '<button class="bnpl-cta" onclick="goScr(\'home\');toast(\'Browse listings to use ' + d.name + '!\')">Shop with ' + d.name + ' →</button>'
+    + '<div style="height:20px;"></div>';
+}
+
+function toggleFaq(i) { var a = document.getElementById('fa-a'+i); var ar = document.getElementById('fa'+i); var open = a.classList.toggle('open'); ar.textContent = open ? '▲' : '▼'; }
+
+// ── MAP ───────────────────────────────────────────────────────────────
+function initMapList() {
+  document.getElementById('mlst').innerHTML = MDATA.map(function(d){
+    return '<div class="mit' + (mActiveId===d.id?' act':'') + '" onclick="selMap(' + d.id + ')">'
+      + '<div class="mem">' + d.e + '</div>'
+      + '<div class="mii"><div class="mit2">' + d.t + '</div>'
+      + '<div class="mid">📍 ' + d.d + ' · ' + d.s + '</div>'
+      + '<div class="mip">$' + d.p.toLocaleString() + '</div>'
+      + '<div class="mim">or $' + (d.p/4).toFixed(2) + '/mo</div></div></div>';
+  }).join('');
+}
+
+function selMap(id) {
+  mActiveId = id;
+  var d = MDATA.find(function(x){ return x.id === id; });
+  document.getElementById('mfe').textContent = d.e;
+  document.getElementById('mftit').textContent = d.t;
+  document.getElementById('mfs').textContent = d.s + ' · ' + d.d + ' away';
+  document.getElementById('mfc').textContent = d.c;
+  document.getElementById('mfp').textContent = '$' + d.p.toLocaleString();
+  document.getElementById('mfm').textContent = 'or $' + (d.p/4).toFixed(2) + '/mo · Affirm 0% APR';
+  document.getElementById('mfl').classList.add('show');
+  initMapList();
+}
+function closeMfl() { mActiveId = null; document.getElementById('mfl').classList.remove('show'); initMapList(); }
+function toggleMapGroup(head, id) { var items = document.getElementById(id); var arrow = head.querySelector('.map-group-arrow'); var open = items.classList.toggle('open'); if(arrow) arrow.classList.toggle('open', open); }
+function selMapCat(el) { if(el){ document.querySelectorAll('.map-group-item').forEach(function(i){ i.classList.remove('act'); }); el.classList.add('act'); toast('Showing: ' + el.textContent.trim()); } else { document.querySelectorAll('.map-group-item').forEach(function(i){ i.classList.remove('act'); }); document.querySelector('.map-group-item').classList.add('act'); } }
+
+// ── MESSAGES ──────────────────────────────────────────────────────────
+function initMsgs() {
+  document.getElementById('cvl').innerHTML = CONVOS.map(function(c,i){
+    return '<div class="cv' + (i===0?' act':'') + '" onclick="openConv(' + i + ')">'
+      + '<div class="cav" style="background:' + c.col + ';">' + c.av + '</div>'
+      + '<div class="ci2"><div class="ct2"><div class="cn2">' + c.nm + '</div><div class="ctm">now</div></div>'
+      + '<div class="cprd">' + c.e + ' ' + c.t + '</div>'
+      + '<div class="cpv">' + c.msgs[c.msgs.length-1].text + '</div></div>'
+      + (c.unread ? '<div class="ud"></div>' : '') + '</div>';
+  }).join('');
+  openConv(0);
+}
+
+function openConv(i) {
+  curConv = i; var c = CONVOS[i];
+  document.querySelectorAll('.cv').forEach(function(el,j){ el.classList.toggle('act', j===i); });
+  document.getElementById('chav').textContent = c.av;
+  document.getElementById('chav').style.background = c.col;
+  document.getElementById('chn').textContent = c.nm;
+  document.getElementById('pre').textContent = c.e;
+  document.getElementById('prt').textContent = c.t;
+  document.getElementById('prp').textContent = c.p;
+  document.getElementById('prc').textContent = c.c;
+  renderMsgs();
+}
+
+function renderMsgs() {
+  var c = CONVOS[curConv];
+  document.getElementById('msgs2').innerHTML = c.msgs.map(function(m){
+    if (m.offer && !m.mine) return '<div class="msg2 theirs"><div class="mav2" style="background:' + c.col + ';">' + c.av + '</div><div><div class="obbl"><div class="oblbl">Offer from ' + c.nm.split(' ')[0] + '</div><div class="obamt">$' + m.offer + '</div><div class="obac"><button class="oba" onclick="acceptOffer(' + m.offer + ')">Accept</button><button class="obd" onclick="openOfm()">Counter</button><button class="obd" onclick="toast(\'Declined\')">Decline</button></div></div><div class="mtime">' + m.time + '</div></div></div>';
+    return '<div class="msg2 ' + (m.mine?'mine':'theirs') + '">' + (!m.mine?'<div class="mav2" style="background:'+c.col+';">'+c.av+'</div>':'') + '<div><div class="bbl">' + m.text + '</div><div class="mtime">' + m.time + '</div></div></div>';
+  }).join('');
+  var el = document.getElementById('msgs2'); el.scrollTop = el.scrollHeight;
+}
+
+function sendMsg() {
+  var inp = document.getElementById('msgin'); var txt = inp.value.trim(); if (!txt) return;
+  CONVOS[curConv].msgs.push({mine:true, text:txt, time:'Just now'});
+  renderMsgs(); inp.value = '';
+  setTimeout(function(){ CONVOS[curConv].msgs.push({mine:false, text:'Got it, thanks!', time:'Just now'}); renderMsgs(); }, 1000);
+}
+
+function acceptOffer(a) { toast('Offer of $' + a + ' accepted! 🎉'); CONVOS[curConv].msgs.push({mine:true, text:'$' + a + ' works! When can you pick up?', time:'Just now'}); renderMsgs(); }
+function openOfm() { document.getElementById('ofmod').classList.add('open'); }
+function closeOfm() { document.getElementById('ofmod').classList.remove('open'); }
+function sendOffer() { var a = document.getElementById('ofamt').value; if (!a) { toast('Enter an amount'); return; } closeOfm(); CONVOS[curConv].msgs.push({mine:true, text:"I'd like to offer $" + a + ".", time:'Just now'}); renderMsgs(); setTimeout(function(){ CONVOS[curConv].msgs.push({mine:false, text:"Hmm, let me think about $" + a + "...", time:'Just now'}); renderMsgs(); }, 1200); }
+
+// ── PROFILE TABS ──────────────────────────────────────────────────────
+function swTab(el, n) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('act'); });
+  el.classList.add('act');
+  ['listings','purchases','reviews'].forEach(function(t){ var e = document.getElementById('tc-' + t); if(e) e.classList.toggle('show', t===n); });
+}
+
+// ── AI HELP ───────────────────────────────────────────────────────────
+function openAI() { document.getElementById('ai-modal').classList.add('open'); }
+function closeAI() { document.getElementById('ai-modal').classList.remove('open'); }
+
+function askAI(el, q) {
+  el.style.display = 'none';
+  addAIMsg(q, true);
+  setTimeout(function(){
+    var key = q.toLowerCase().replace(/[?!]/g,'');
+    var resp = AI_RESP[key] || AI_RESP['default'];
+    addAIMsg(resp, false);
+  }, 600);
+}
+
+function addAIMsg(txt, isUser) {
+  var box = document.getElementById('ai-msgs');
+  var div = document.createElement('div');
+  div.className = 'ai-msg ' + (isUser ? 'user' : 'bot');
+  div.innerHTML = '<div class="ai-av-ic ' + (isUser ? 'usr' : 'bot') + '">' + (isUser ? (curUser.initials||'U') : '✨') + '</div>'
+    + '<div class="ai-bbl">' + txt + '</div>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendAI() {
+  var inp = document.getElementById('ai-input'); var txt = inp.value.trim(); if (!txt) return;
+  addAIMsg(txt, true); inp.value = '';
+  setTimeout(function(){
+    var resp = AI_RESP['default'];
+    var keys = Object.keys(AI_RESP);
+    for (var i=0; i<keys.length; i++) {
+      if (keys[i] !== 'default' && txt.toLowerCase().indexOf(keys[i].split(' ')[0]) > -1) { resp = AI_RESP[keys[i]]; break; }
+    }
+    addAIMsg(resp, false);
+  }, 700);
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────
+function toast(msg) {
+  var t = document.getElementById('toastel');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────
+renderGrid('all');
+</script>
+</body>
+</html>
