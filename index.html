@@ -1121,12 +1121,7 @@ body.dark .leaflet-container{background:#111;}
     <div>
       <div class="tabs"><div class="tab act" onclick="swTab(this,'listings')">Listings</div><div class="tab" onclick="swTab(this,'purchases')">Purchases</div><div class="tab" onclick="swTab(this,'reviews')">Reviews</div></div>
       <div class="tbc show" id="tc-listings">
-        <div class="lg2">
-          <div class="lc"><div class="lcimg"><span>📱</span><div class="lsa">Active</div></div><div class="lcb"><div class="lct">iPhone 14 Pro</div><div class="lcp">$649</div><div class="lcv">142 views</div></div></div>
-          <div class="lc"><div class="lcimg"><span>💻</span><div class="lsa">Active</div></div><div class="lcb"><div class="lct">MacBook Air M2</div><div class="lcp">$899</div><div class="lcv">98 views</div></div></div>
-          <div class="lc"><div class="lcimg"><span>🎧</span><div class="lsa lss">Sold</div></div><div class="lcb"><div class="lct">Sony WH-1000XM5</div><div class="lcp">$185</div><div class="lcv">Sold for $185</div></div></div>
-          <div class="lc" style="border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer;" onclick="openSell()"><div style="text-align:center;color:var(--mu);font-size:10px;font-weight:600;">+ Add listing</div></div>
-        </div>
+        <div class="lg2" id="profile-listings-grid"></div>
       </div>
       <div class="tbc" id="tc-purchases">
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -1505,12 +1500,14 @@ var loggedIn = false;
 var curUser = getDefaultProfile();
 var authUsers = [];
 var currentUserEmail = '';
+var currentUserId = '';
 var savedIds = [];
 var curProdId = null;
 var curPayTab = 'affirm';
 var curConv = 0;
 var mActiveId = null;
-var userListings = []; // listings created by the user
+var remoteListings = [];
+var listingsLoaded = false;
 var sellPhotos = [];
 var curProdImages = [];
 var savedSearches = [];
@@ -1560,7 +1557,70 @@ var supabaseClient = window.supabase && window.supabase.createClient
   : null;
 
 function getAllListings() {
-  return userListings.concat(DATA);
+  return remoteListings.concat(DATA);
+}
+
+function getListingEmoji(cat) {
+  var emojiMap = {phones:'📱',laptops:'💻',audio:'🎧',cameras:'📸',gaming:'🎮',cars:'🚗',motorcycles:'🏍️',bicycles:'🚲',scooters:'🛴',furniture:'🛋️',appliances:'🍳',tools:'🔧',fitness:'🏋️',outdoor:'🏕️',sports:'⚽',mens:'👔',womens:'👗',shoes:'👟',bags:'👜',books:'📚',toys:'🧸',art:'🎨'};
+  return emojiMap[cat] || '📦';
+}
+
+function normalizeRemoteListing(row) {
+  return {
+    id: row.id,
+    e: row.emoji || getListingEmoji(row.category),
+    t: row.title,
+    p: Number(row.price || 0),
+    loc: row.location_label || row.area_label || row.street_label || 'Toronto, ON',
+    fullAddress: row.full_address || row.location_label || '',
+    streetLabel: row.street_label || '',
+    areaLabel: row.area_label || row.location_label || '',
+    lat: typeof row.lat === 'number' ? row.lat : parseFloat(row.lat),
+    lng: typeof row.lng === 'number' ? row.lng : parseFloat(row.lng),
+    cond: row.condition || 'Good',
+    cat: row.category || 'other',
+    desc: row.description || 'No description provided.',
+    photos: Array.isArray(row.photos) ? row.photos : [],
+    sn: row.seller_name || 'FlexBuy Seller',
+    sr: row.seller_rating || '5.0 (new seller)',
+    sc: Number(row.seller_listing_count || 0),
+    ownerId: row.owner_id || '',
+    createdAt: row.created_at || ''
+  };
+}
+
+function applyRemoteListingCounts() {
+  var counts = {};
+  remoteListings.forEach(function(item){
+    var key = item.ownerId || item.sn;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  remoteListings = remoteListings.map(function(item){
+    var key = item.ownerId || item.sn;
+    item.sc = counts[key] || item.sc || 0;
+    return item;
+  });
+}
+
+async function loadRemoteListings() {
+  var client = getSupabaseClient();
+  if (!client) return;
+  var result = await client
+    .from('listings')
+    .select('id,owner_id,title,price,category,condition,location_label,full_address,street_label,area_label,description,lat,lng,photos,emoji,seller_name,seller_rating,seller_listing_count,created_at,status')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+  if (result.error) {
+    console.warn('Could not load listings from Supabase:', result.error.message);
+    return;
+  }
+  remoteListings = (result.data || []).map(normalizeRemoteListing);
+  applyRemoteListingCounts();
+  listingsLoaded = true;
+  renderGrid('all');
+  renderSaved();
+  renderProfileListings();
+  refreshNearMap();
 }
 
 function getListingMedia(d, cls, fallbackCls) {
@@ -2035,9 +2095,11 @@ async function refreshSessionUser() {
     return;
   }
   currentUserEmail = normalizeEmail(user.email);
+  currentUserId = user.id;
   loggedIn = true;
   curUser = Object.assign(getDefaultProfile(), buildProfileFromSupabase(user, profileResult.data));
   renderProfile();
+  renderProfileListings();
   syncAuthUI();
   persistPrefs();
 }
@@ -2179,6 +2241,21 @@ function syncAuthUI() {
   av.textContent = curUser.initials;
 }
 
+function renderProfileListings() {
+  var grid = document.getElementById('profile-listings-grid');
+  if (!grid) return;
+  var mine = currentUserId ? remoteListings.filter(function(item){ return item.ownerId === currentUserId; }) : [];
+  var cards = mine.map(function(item){
+    return '<div class="lc" onclick="openProd(' + item.id + ')"><div class="lcimg">' + getListingMedia(item) + '<div class="lsa">Active</div></div><div class="lcb"><div class="lct">' + escapeHtml(item.t) + '</div><div class="lcp">$' + item.p.toLocaleString() + '</div><div class="lcv">Live on FlexBuy</div></div></div>';
+  }).join('');
+  var addCard = '<div class="lc" style="border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;min-height:80px;cursor:pointer;" onclick="openSell()"><div style="text-align:center;color:var(--mu);font-size:10px;font-weight:600;">+ Add listing</div></div>';
+  if (!mine.length) {
+    grid.innerHTML = '<div class="lc" style="grid-column:1/-1;min-height:92px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:11px;font-weight:600;">Your live listings will appear here.</div>' + addCard;
+    return;
+  }
+  grid.innerHTML = cards + addCard;
+}
+
 function renderProfile() {
   var pnm = document.getElementById('prof-name');
   var ph = document.getElementById('prof-handle');
@@ -2205,6 +2282,7 @@ function setLoggedIn(name, initials) {
   });
   curUser = profile;
   renderProfile();
+  renderProfileListings();
   syncAuthUI();
   persistPrefs();
 }
@@ -2216,6 +2294,7 @@ async function doLogout() {
   if (result.error) { toast(result.error.message || 'Could not sign out'); return; }
   loggedIn = false;
   currentUserEmail = '';
+  currentUserId = '';
   curUser = getDefaultProfile();
   renderProfile();
   syncAuthUI();
@@ -2300,6 +2379,7 @@ async function saveEditProfile() {
   }
   curUser = Object.assign({}, curUser, buildProfileFromSupabase(auth.data.user, profileSave.data));
   renderProfile();
+  renderProfileListings();
   syncAuthUI();
   persistPrefs();
   closeEditProfile();
@@ -2721,7 +2801,7 @@ function clearSellFieldError(name) {
   }
 }
 
-function submitListing() {
+async function submitListing() {
   var title = document.getElementById('sell-title').value.trim();
   var price = parseFloat(document.getElementById('sell-price').value);
   var cat   = document.getElementById('sell-cat').value;
@@ -2733,6 +2813,7 @@ function submitListing() {
 
   clearSellFieldErrors();
 
+  if (!loggedIn || !currentUserId) { toast('Please sign in to post a listing'); return; }
   if (!title) { setSellFieldError('title', 'Title is required.'); hasError = true; }
   if (!price || price <= 0) { setSellFieldError('price', 'Enter a valid price.'); hasError = true; }
   if (!cat)   { setSellFieldError('cat', 'Choose a category.'); hasError = true; }
@@ -2742,34 +2823,48 @@ function submitListing() {
 
   errEl.classList.remove('show');
 
-  // Emojis by category
-  var emojiMap = {phones:'📱',laptops:'💻',audio:'🎧',cameras:'📸',gaming:'🎮',cars:'🚗',motorcycles:'🏍️',bicycles:'🚲',scooters:'🛴',furniture:'🛋️',appliances:'🍳',tools:'🔧',fitness:'🏋️',outdoor:'🏕️',sports:'⚽',mens:'👔',womens:'👗',shoes:'👟',bags:'👜',books:'📚',toys:'🧸',art:'🎨'};
-  var newId = Date.now();
-  var newListing = {
-    id: newId,
-    e: emojiMap[cat] || '📦',
-    t: title,
-    p: price,
-    loc: sellLocSelection.areaLabel || sellLocSelection.shortLabel || sellLocSelection.label,
-    fullAddress: sellLocSelection.label,
-    streetLabel: sellLocSelection.shortLabel,
-    areaLabel: sellLocSelection.areaLabel || sellLocSelection.subtitle || sellLocSelection.shortLabel,
+  var client = getSupabaseClient();
+  if (!client) return;
+
+  var payload = {
+    owner_id: currentUserId,
+    title: title,
+    price: price,
+    category: cat,
+    condition: cond,
+    location_label: sellLocSelection.areaLabel || sellLocSelection.shortLabel || sellLocSelection.label,
+    full_address: sellLocSelection.label,
+    street_label: sellLocSelection.shortLabel,
+    area_label: sellLocSelection.areaLabel || sellLocSelection.subtitle || sellLocSelection.shortLabel,
     lat: sellLocSelection.lat,
     lng: sellLocSelection.lng,
-    cond: cond,
-    cat: cat,
-    desc: desc || 'No description provided.',
+    description: desc || 'No description provided.',
     photos: sellPhotos.slice(),
-    sn: curUser.name,
-    sr: '5.0 (new seller)',
-    sc: 0
+    emoji: getListingEmoji(cat),
+    seller_name: curUser.name,
+    seller_rating: '5.0 (new seller)',
+    seller_listing_count: 0,
+    status: 'active'
   };
-  userListings.unshift(newListing);
 
+  var insert = await client
+    .from('listings')
+    .insert(payload)
+    .select('id,owner_id,title,price,category,condition,location_label,full_address,street_label,area_label,description,lat,lng,photos,emoji,seller_name,seller_rating,seller_listing_count,created_at,status')
+    .single();
+
+  if (insert.error) {
+    toast(insert.error.message || 'Could not post listing yet');
+    return;
+  }
+
+  remoteListings.unshift(normalizeRemoteListing(insert.data));
+  applyRemoteListingCounts();
+  renderProfileListings();
   resetSellForm();
-
   closeSell();
   renderGrid('all');
+  renderSaved();
   refreshNearMap();
   toast('Listing posted! 🎉 "' + title + '" is now live.');
 }
@@ -3158,6 +3253,7 @@ async function initAuth() {
 // ── INIT ───────────────────────────────────────────────────────────────
 loadPrefs();
 initAuth();
+loadRemoteListings();
 renderGrid('all');
 renderSavedSearches();
 updateSearchSaveButton();
