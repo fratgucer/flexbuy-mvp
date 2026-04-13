@@ -2026,16 +2026,36 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
+function getOAuthRedirectUrl() {
+  if (window.location.protocol.indexOf('http') === 0) {
+    return window.location.origin + window.location.pathname;
+  }
+  return undefined;
+}
+
+function getMetadataValue(metadata, keys) {
+  metadata = metadata || {};
+  for (var i = 0; i < keys.length; i++) {
+    var value = metadata[keys[i]];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
 function buildProfileFromSupabase(user, profile) {
   var metadata = user && user.user_metadata ? user.user_metadata : {};
-  var fullName = (profile && profile.full_name) || metadata.full_name || user.email || 'FlexBuy User';
+  var fullName = (profile && profile.full_name)
+    || getMetadataValue(metadata, ['full_name', 'name', 'user_name', 'preferred_username', 'given_name'])
+    || user.email
+    || 'FlexBuy User';
+  var fallbackUsername = getMetadataValue(metadata, ['username', 'user_name', 'preferred_username', 'nickname']);
   return {
     name: fullName,
     initials: makeInitials(fullName),
-    username: (profile && profile.username) || metadata.username || slugifyUsername(fullName),
+    username: (profile && profile.username) || fallbackUsername || slugifyUsername(fullName),
     memberSince: (profile && profile.created_at ? String(new Date(profile.created_at).getFullYear()) : String(new Date().getFullYear())),
-    bio: (profile && profile.bio) || metadata.bio || 'Buying and selling great second-hand finds on FlexBuy.',
-    location: (profile && profile.location) || metadata.location || 'Toronto, ON',
+    bio: (profile && profile.bio) || getMetadataValue(metadata, ['bio']) || 'Buying and selling great second-hand finds on FlexBuy.',
+    location: (profile && profile.location) || getMetadataValue(metadata, ['location', 'city']) || 'Toronto, ON',
     reply: 'Replies in < 1 hour',
     verified: 'Email account connected'
   };
@@ -2051,10 +2071,22 @@ async function ensureProfileRow(user, overrides) {
     .maybeSingle();
   var existing = current.data || null;
   var metadata = user.user_metadata || {};
-  var fullName = (overrides && overrides.full_name) || (existing && existing.full_name) || metadata.full_name || user.email || 'FlexBuy User';
-  var location = (overrides && overrides.location) || (existing && existing.location) || metadata.location || 'Toronto, ON';
-  var bio = (overrides && typeof overrides.bio === 'string') ? overrides.bio : ((existing && existing.bio) || metadata.bio || 'Buying and selling great second-hand finds on FlexBuy.');
-  var username = (overrides && overrides.username) || (existing && existing.username) || metadata.username || slugifyUsername(fullName);
+  var fullName = (overrides && overrides.full_name)
+    || (existing && existing.full_name)
+    || getMetadataValue(metadata, ['full_name', 'name', 'user_name', 'preferred_username', 'given_name'])
+    || user.email
+    || 'FlexBuy User';
+  var location = (overrides && overrides.location)
+    || (existing && existing.location)
+    || getMetadataValue(metadata, ['location', 'city'])
+    || 'Toronto, ON';
+  var bio = (overrides && typeof overrides.bio === 'string')
+    ? overrides.bio
+    : ((existing && existing.bio) || getMetadataValue(metadata, ['bio']) || 'Buying and selling great second-hand finds on FlexBuy.');
+  var username = (overrides && overrides.username)
+    || (existing && existing.username)
+    || getMetadataValue(metadata, ['username', 'user_name', 'preferred_username', 'nickname'])
+    || slugifyUsername(fullName);
   var payload = {
     id: user.id,
     email: user.email,
@@ -2152,12 +2184,33 @@ async function resendConfirmation() {
   toast('Confirmation email sent to ' + email + '!');
 }
 
+async function startOAuthLogin(provider) {
+  var client = getSupabaseClient();
+  if (!client) return;
+  var options = {
+    redirectTo: getOAuthRedirectUrl()
+  };
+  if (provider === 'google') {
+    options.scopes = 'email profile';
+  }
+  if (provider === 'apple') {
+    options.scopes = 'email name';
+  }
+  var result = await client.auth.signInWithOAuth({
+    provider: provider,
+    options: options
+  });
+  if (result.error) {
+    toast(result.error.message || ('Could not start ' + provider + ' sign in'));
+  }
+}
+
 function doGoogleLogin() {
-  toast('Google sign in is not connected yet. We can wire it next from Supabase OAuth Apps.');
+  startOAuthLogin('google');
 }
 
 function doAppleLogin()  {
-  toast('Apple sign in is not connected yet. We can wire it next from Supabase OAuth Apps.');
+  startOAuthLogin('apple');
 }
 
 async function doSignIn() {
