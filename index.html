@@ -842,7 +842,7 @@ body.dark .leaflet-container{background:#111;}
     </div>
 
     <div class="sbsec">Account</div>
-    <div class="sbi" id="nav-messages" onclick="goScr('messages')"><span class="sbi-ic">💬</span> Messages <span class="sbbdg">3</span></div>
+    <div class="sbi" id="nav-messages" onclick="goScr('messages')"><span class="sbi-ic">💬</span> Messages <span class="sbbdg" id="messages-badge" style="display:none;">0</span></div>
     <div class="sbi" id="nav-profile" onclick="goScr('profile')"><span class="sbi-ic">👤</span> Profile</div>
 
     <div class="sbsec">Pay Later</div>
@@ -1084,7 +1084,7 @@ body.dark .leaflet-container{background:#111;}
       <div class="cvl" id="cvl"></div>
     </div>
     <div class="cha">
-      <div class="chh"><div class="chav" id="chav"></div><div><div class="chn" id="chn"></div><div class="chs">● Online now</div></div><div class="chac"><button class="cab">View listing</button><button class="cab">Profile</button></div></div>
+      <div class="chh"><div class="chav" id="chav"></div><div><div class="chn" id="chn"></div><div class="chs" id="chs">● Online now</div></div><div class="chac"><button class="cab" id="msg-view-listing">View listing</button><button class="cab" id="msg-view-profile">Profile</button></div></div>
       <div class="pr"><div class="pre" id="pre"></div><div><div class="prt" id="prt"></div><div class="prp" id="prp"></div><div class="prc" id="prc"></div></div><button class="ofb" onclick="openOfm()">Make Offer</button></div>
       <div class="msgs2" id="msgs2"></div>
       <div class="chin">
@@ -1223,7 +1223,7 @@ body.dark .leaflet-container{background:#111;}
       </div>
       <div class="prod-cta">
         <button class="prod-buy" onclick="buyNow()">Buy Now</button>
-        <button class="prod-msg" onclick="goScr('messages');closeProd()">💬</button>
+        <button class="prod-msg" onclick="openProductConversation()">💬</button>
         <button class="prod-save-btn" id="prod-save-icon" onclick="toggleSave()">🤍</button>
       </div>
     </div>
@@ -1504,10 +1504,12 @@ var currentUserId = '';
 var savedIds = [];
 var curProdId = null;
 var curPayTab = 'affirm';
-var curConv = 0;
+var curConv = null;
 var mActiveId = null;
 var remoteListings = [];
+var remoteConversations = [];
 var listingsLoaded = false;
+var conversationsLoaded = false;
 var sellPhotos = [];
 var curProdImages = [];
 var savedSearches = [];
@@ -1566,8 +1568,10 @@ function getListingEmoji(cat) {
 }
 
 function normalizeRemoteListing(row) {
+  var dbId = Number(row.id || 0);
   return {
-    id: row.id,
+    id: dbId ? (1000000 + dbId) : Date.now(),
+    dbId: dbId || null,
     e: row.emoji || getListingEmoji(row.category),
     t: row.title,
     p: Number(row.price || 0),
@@ -2082,6 +2086,8 @@ async function refreshSessionUser() {
   if (auth.error || !auth.data || !auth.data.user) {
     loggedIn = false;
     currentUserEmail = '';
+    currentUserId = '';
+    remoteConversations = [];
     curUser = getDefaultProfile();
     renderProfile();
     syncAuthUI();
@@ -2102,6 +2108,7 @@ async function refreshSessionUser() {
   renderProfileListings();
   syncAuthUI();
   persistPrefs();
+  loadRemoteConversations();
 }
 
 function switchTab(t) {
@@ -2285,6 +2292,7 @@ function setLoggedIn(name, initials) {
   renderProfileListings();
   syncAuthUI();
   persistPrefs();
+  loadRemoteConversations();
 }
 
 async function doLogout() {
@@ -2296,8 +2304,12 @@ async function doLogout() {
   currentUserEmail = '';
   currentUserId = '';
   curUser = getDefaultProfile();
+  remoteConversations = [];
+  conversationsLoaded = false;
   renderProfile();
+  renderProfileListings();
   syncAuthUI();
+  updateMessagesBadge();
   persistPrefs();
   goScr('home');
   toast('Signed out successfully');
@@ -3135,52 +3147,348 @@ function viewListingFromMap(id) {
 }
 
 // ── MESSAGES ──────────────────────────────────────────────────────────
-function initMsgs() {
-  document.getElementById('cvl').innerHTML = CONVOS.map(function(c,i){
-    return '<div class="cv' + (i===0?' act':'') + '" onclick="openConv(' + i + ')">'
-      + '<div class="cav" style="background:' + c.col + ';">' + c.av + '</div>'
-      + '<div class="ci2"><div class="ct2"><div class="cn2">' + c.nm + '</div><div class="ctm">now</div></div>'
-      + '<div class="cprd">' + c.e + ' ' + c.t + '</div>'
-      + '<div class="cpv">' + c.msgs[c.msgs.length-1].text + '</div></div>'
-      + (c.unread ? '<div class="ud"></div>' : '') + '</div>';
-  }).join('');
-  openConv(0);
+function formatMessageTime(ts) {
+  if (!ts) return 'Just now';
+  var date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return 'Just now';
+  var now = new Date();
+  var sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return date.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+  var yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
-function openConv(i) {
-  curConv = i; var c = CONVOS[i];
-  document.querySelectorAll('.cv').forEach(function(el,j){ el.classList.toggle('act', j===i); });
+function formatCurrency(amount) {
+  var value = Number(amount || 0);
+  return '$' + value.toLocaleString('en-US', {
+    minimumFractionDigits: value % 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  });
+}
+
+function getConversationColor(seed) {
+  var palette = ['#1a1a2e','#2e7d32','#6a1b9a','#0f766e','#8a4b12','#b83280'];
+  var value = String(seed || 'flexbuy');
+  var total = 0;
+  for (var i = 0; i < value.length; i++) total += value.charCodeAt(i);
+  return palette[total % palette.length];
+}
+
+function getListingConversationRef(listing) {
+  if (!listing) return '';
+  if (listing.dbId) return 'db:' + listing.dbId;
+  return 'demo:' + listing.id;
+}
+
+function normalizeConversationMessage(row) {
+  return {
+    id: row.id,
+    mine: row.sender_role === 'buyer',
+    text: row.body || '',
+    offer: row.offer_amount == null ? null : Number(row.offer_amount),
+    time: formatMessageTime(row.created_at),
+    createdAt: row.created_at || ''
+  };
+}
+
+function normalizeConversationRow(row) {
+  var sellerName = row.seller_name || 'FlexBuy Seller';
+  var messages = Array.isArray(row.messages) ? row.messages.map(normalizeConversationMessage) : [];
+  messages.sort(function(a, b){ return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
+  var last = messages[messages.length - 1];
+  var lastPreview = row.last_message || (last ? (last.offer != null ? 'Offer: ' + formatCurrency(last.offer) : last.text) : 'Start the conversation');
+  return {
+    id: row.id,
+    listingRef: row.listing_ref,
+    av: row.seller_avatar || makeInitials(sellerName),
+    col: row.seller_color || getConversationColor(sellerName),
+    nm: sellerName,
+    e: row.listing_emoji || '📦',
+    t: row.listing_title || 'Listing',
+    p: formatCurrency(row.listing_price || 0),
+    c: row.listing_context || '',
+    msgs: messages,
+    unread: false,
+    updatedAt: row.last_message_at || row.created_at || '',
+    lastPreview: lastPreview,
+    listingPriceValue: Number(row.listing_price || 0)
+  };
+}
+
+function getCurrentConversation() {
+  return remoteConversations.find(function(c){ return c.id === curConv; }) || null;
+}
+
+function findListingForConversation(conversation) {
+  if (!conversation) return null;
+  return getAllListings().find(function(item){ return getListingConversationRef(item) === conversation.listingRef; }) || null;
+}
+
+function updateMessagesBadge() {
+  var badge = document.getElementById('messages-badge');
+  if (!badge) return;
+  var count = remoteConversations.length;
+  badge.textContent = String(count);
+  badge.style.display = count ? '' : 'none';
+}
+
+function renderConversationList() {
+  var wrap = document.getElementById('cvl');
+  if (!wrap) return;
+  if (!loggedIn) {
+    wrap.innerHTML = '<div style="padding:18px 16px;color:var(--mu);font-size:10px;font-weight:600;line-height:1.6;">Sign in to see your real conversations.</div>';
+    return;
+  }
+  if (!remoteConversations.length) {
+    wrap.innerHTML = '<div style="padding:18px 16px;color:var(--mu);font-size:10px;font-weight:600;line-height:1.6;">No conversations yet. Open a listing and tap the chat button to start one.</div>';
+    return;
+  }
+  wrap.innerHTML = remoteConversations.map(function(c){
+    return '<div class="cv' + (c.id === curConv ? ' act':'') + '" onclick="openConv(' + JSON.stringify(c.id) + ')">'
+      + '<div class="cav" style="background:' + c.col + ';">' + c.av + '</div>'
+      + '<div class="ci2"><div class="ct2"><div class="cn2">' + escapeHtml(c.nm) + '</div><div class="ctm">' + escapeHtml(formatMessageTime(c.updatedAt)) + '</div></div>'
+      + '<div class="cprd">' + escapeHtml(c.e + ' ' + c.t) + '</div>'
+      + '<div class="cpv">' + escapeHtml(c.lastPreview || 'Start the conversation') + '</div></div>'
+      + (c.unread ? '<div class="ud"></div>' : '') + '</div>';
+  }).join('');
+}
+
+function renderConversationPane() {
+  var input = document.getElementById('msgin');
+  var sendBtn = document.querySelector('.sndb');
+  var offerBtn = document.querySelector('.och');
+  var viewListingBtn = document.getElementById('msg-view-listing');
+  var profileBtn = document.getElementById('msg-view-profile');
+  if (!loggedIn) {
+    document.getElementById('chav').textContent = 'FB';
+    document.getElementById('chav').style.background = '#111';
+    document.getElementById('chn').textContent = 'Sign in required';
+    document.getElementById('chs').textContent = '● Private inbox';
+    document.getElementById('pre').textContent = '💬';
+    document.getElementById('prt').textContent = 'Your inbox';
+    document.getElementById('prp').textContent = 'Sign in to message sellers and keep your chats synced.';
+    document.getElementById('prc').textContent = '';
+    document.getElementById('msgs2').innerHTML = '<div style="padding:28px 16px;color:var(--mu);font-size:10px;font-weight:600;line-height:1.7;">Open any listing and sign in to start a real conversation.</div>';
+    if (input) { input.value = ''; input.disabled = true; input.placeholder = 'Sign in to message sellers'; }
+    if (sendBtn) sendBtn.disabled = true;
+    if (offerBtn) offerBtn.disabled = true;
+    if (viewListingBtn) viewListingBtn.onclick = function(){ goScr('login'); };
+    if (profileBtn) profileBtn.onclick = function(){ goScr('login'); };
+    return;
+  }
+  var c = getCurrentConversation();
+  if (!c) {
+    document.getElementById('chav').textContent = 'FB';
+    document.getElementById('chav').style.background = '#111';
+    document.getElementById('chn').textContent = 'Messages';
+    document.getElementById('chs').textContent = '● Waiting for your first chat';
+    document.getElementById('pre').textContent = '💬';
+    document.getElementById('prt').textContent = 'No active conversation';
+    document.getElementById('prp').textContent = 'Message a seller from any listing to start a real thread.';
+    document.getElementById('prc').textContent = '';
+    document.getElementById('msgs2').innerHTML = '<div style="padding:28px 16px;color:var(--mu);font-size:10px;font-weight:600;line-height:1.7;">Your future messages will appear here.</div>';
+    if (input) { input.value = ''; input.disabled = true; input.placeholder = 'Open a listing to start chatting'; }
+    if (sendBtn) sendBtn.disabled = true;
+    if (offerBtn) offerBtn.disabled = true;
+    if (viewListingBtn) viewListingBtn.onclick = function(){};
+    if (profileBtn) profileBtn.onclick = function(){ toast('Seller profiles are coming next.'); };
+    return;
+  }
   document.getElementById('chav').textContent = c.av;
   document.getElementById('chav').style.background = c.col;
   document.getElementById('chn').textContent = c.nm;
+  document.getElementById('chs').textContent = '● Real conversation';
   document.getElementById('pre').textContent = c.e;
   document.getElementById('prt').textContent = c.t;
   document.getElementById('prp').textContent = c.p;
   document.getElementById('prc').textContent = c.c;
-  renderMsgs();
-}
-
-function renderMsgs() {
-  var c = CONVOS[curConv];
   document.getElementById('msgs2').innerHTML = c.msgs.map(function(m){
-    if (m.offer && !m.mine) return '<div class="msg2 theirs"><div class="mav2" style="background:' + c.col + ';">' + c.av + '</div><div><div class="obbl"><div class="oblbl">Offer from ' + c.nm.split(' ')[0] + '</div><div class="obamt">$' + m.offer + '</div><div class="obac"><button class="oba" onclick="acceptOffer(' + m.offer + ')">Accept</button><button class="obd" onclick="openOfm()">Counter</button><button class="obd" onclick="toast(\'Declined\')">Decline</button></div></div><div class="mtime">' + m.time + '</div></div></div>';
-    return '<div class="msg2 ' + (m.mine?'mine':'theirs') + '">' + (!m.mine?'<div class="mav2" style="background:'+c.col+';">'+c.av+'</div>':'') + '<div><div class="bbl">' + m.text + '</div><div class="mtime">' + m.time + '</div></div></div>';
+    if (m.offer != null && !m.mine) return '<div class="msg2 theirs"><div class="mav2" style="background:' + c.col + ';">' + c.av + '</div><div><div class="obbl"><div class="oblbl">Offer from ' + escapeHtml(c.nm.split(' ')[0]) + '</div><div class="obamt">' + formatCurrency(m.offer) + '</div><div class="obac"><button class="oba" onclick="acceptOffer(' + m.offer + ')">Accept</button><button class="obd" onclick="openOfm()">Counter</button><button class="obd" onclick="toast(\'Declined\')">Decline</button></div></div><div class="mtime">' + escapeHtml(m.time) + '</div></div></div>';
+    return '<div class="msg2 ' + (m.mine ? 'mine' : 'theirs') + '">' + (!m.mine ? '<div class="mav2" style="background:' + c.col + ';">' + c.av + '</div>' : '') + '<div><div class="bbl">' + escapeHtml(m.offer != null && m.mine ? ('Offer sent: ' + formatCurrency(m.offer)) : m.text) + '</div><div class="mtime">' + escapeHtml(m.time) + '</div></div></div>';
   }).join('');
-  var el = document.getElementById('msgs2'); el.scrollTop = el.scrollHeight;
+  var listEl = document.getElementById('msgs2');
+  listEl.scrollTop = listEl.scrollHeight;
+  if (input) { input.disabled = false; input.placeholder = 'Type a message...'; }
+  if (sendBtn) sendBtn.disabled = false;
+  if (offerBtn) offerBtn.disabled = false;
+  if (viewListingBtn) {
+    viewListingBtn.onclick = function(){
+      var listing = findListingForConversation(c);
+      if (listing) openProd(listing.id);
+      else toast('This listing snapshot is no longer available.');
+    };
+  }
+  if (profileBtn) profileBtn.onclick = function(){ toast('Seller profiles are coming next.'); };
 }
 
-function sendMsg() {
-  var inp = document.getElementById('msgin'); var txt = inp.value.trim(); if (!txt) return;
-  CONVOS[curConv].msgs.push({mine:true, text:txt, time:'Just now'});
-  renderMsgs(); inp.value = '';
-  setTimeout(function(){ CONVOS[curConv].msgs.push({mine:false, text:'Got it, thanks!', time:'Just now'}); renderMsgs(); }, 1000);
+async function loadRemoteConversations(selectId) {
+  if (!loggedIn || !currentUserId) {
+    remoteConversations = [];
+    conversationsLoaded = true;
+    curConv = null;
+    renderConversationList();
+    renderConversationPane();
+    updateMessagesBadge();
+    return;
+  }
+  var client = getSupabaseClient();
+  if (!client) return;
+  var result = await client
+    .from('conversations')
+    .select('id,buyer_id,listing_ref,seller_name,seller_avatar,seller_color,listing_emoji,listing_title,listing_price,listing_context,last_message,last_message_at,created_at,messages(id,sender_role,body,offer_amount,created_at)')
+    .eq('buyer_id', currentUserId)
+    .order('last_message_at', { ascending: false });
+  if (result.error) {
+    console.warn('Could not load conversations from Supabase:', result.error.message);
+    return;
+  }
+  remoteConversations = (result.data || []).map(normalizeConversationRow);
+  conversationsLoaded = true;
+  if (selectId && remoteConversations.some(function(c){ return c.id === selectId; })) {
+    curConv = selectId;
+  } else if (!curConv || !remoteConversations.some(function(c){ return c.id === curConv; })) {
+    curConv = remoteConversations.length ? remoteConversations[0].id : null;
+  }
+  renderConversationList();
+  renderConversationPane();
+  updateMessagesBadge();
 }
 
-function acceptOffer(a) { toast('Offer of $' + a + ' accepted! 🎉'); CONVOS[curConv].msgs.push({mine:true, text:'$' + a + ' works! When can you pick up?', time:'Just now'}); renderMsgs(); }
-function openOfm() { document.getElementById('ofmod').classList.add('open'); }
+async function initMsgs() {
+  await loadRemoteConversations(curConv);
+}
+
+function openConv(id) {
+  curConv = id;
+  renderConversationList();
+  renderConversationPane();
+}
+
+async function syncConversationAfterSend(conversationId, messageRow) {
+  var preview = messageRow.offer_amount == null ? messageRow.body : ('Offer: ' + formatCurrency(messageRow.offer_amount));
+  remoteConversations = remoteConversations.map(function(c){
+    if (c.id !== conversationId) return c;
+    c.msgs.push(normalizeConversationMessage(messageRow));
+    c.lastPreview = preview;
+    c.updatedAt = messageRow.created_at;
+    return c;
+  }).sort(function(a, b){ return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0); });
+  curConv = conversationId;
+  var client = getSupabaseClient();
+  if (client) {
+    await client.from('conversations').update({
+      last_message: preview,
+      last_message_at: messageRow.created_at
+    }).eq('id', conversationId);
+  }
+  renderConversationList();
+  renderConversationPane();
+  updateMessagesBadge();
+}
+
+async function sendConversationMessage(body, offerAmount) {
+  var c = getCurrentConversation();
+  if (!c) {
+    toast('Open a conversation first');
+    return false;
+  }
+  var client = getSupabaseClient();
+  if (!client) return false;
+  var payload = {
+    conversation_id: c.id,
+    sender_role: 'buyer',
+    body: body,
+    offer_amount: offerAmount == null ? null : Number(offerAmount)
+  };
+  var insert = await client.from('messages').insert(payload).select('id,sender_role,body,offer_amount,created_at').single();
+  if (insert.error) {
+    toast(insert.error.message || 'Could not send your message');
+    return false;
+  }
+  await syncConversationAfterSend(c.id, insert.data);
+  return true;
+}
+
+async function sendMsg() {
+  var inp = document.getElementById('msgin');
+  var txt = inp.value.trim();
+  if (!txt) return;
+  var sent = await sendConversationMessage(txt, null);
+  if (sent) inp.value = '';
+}
+
+async function acceptOffer(a) {
+  await sendConversationMessage(formatCurrency(a) + ' works! When can you pick up?', null);
+  toast('Offer accepted');
+}
+
+function openOfm() {
+  if (!loggedIn) { goScr('login'); toast('Please sign in to make an offer'); return; }
+  if (!getCurrentConversation()) { toast('Open a conversation first'); return; }
+  document.getElementById('ofmod').classList.add('open');
+}
+
 function closeOfm() { document.getElementById('ofmod').classList.remove('open'); }
-function sendOffer() { var a = document.getElementById('ofamt').value; if (!a) { toast('Enter an amount'); return; } closeOfm(); CONVOS[curConv].msgs.push({mine:true, text:"I'd like to offer $" + a + ".", time:'Just now'}); renderMsgs(); setTimeout(function(){ CONVOS[curConv].msgs.push({mine:false, text:"Hmm, let me think about $" + a + "...", time:'Just now'}); renderMsgs(); }, 1200); }
 
+async function sendOffer() {
+  var a = parseFloat(document.getElementById('ofamt').value);
+  if (!a || a <= 0) { toast('Enter an amount'); return; }
+  var label = formatCurrency(a);
+  var sent = await sendConversationMessage("I'd like to offer " + label + '.', a);
+  if (!sent) return;
+  document.getElementById('ofamt').value = '';
+  closeOfm();
+}
+
+async function ensureConversationForListing(listing) {
+  if (!listing || !loggedIn || !currentUserId) return null;
+  var listingRef = getListingConversationRef(listing);
+  var existing = remoteConversations.find(function(item){ return item.listingRef === listingRef; });
+  if (existing) return existing.id;
+  var client = getSupabaseClient();
+  if (!client) return null;
+  var payload = {
+    buyer_id: currentUserId,
+    listing_ref: listingRef,
+    seller_name: listing.sn || 'FlexBuy Seller',
+    seller_avatar: makeInitials(listing.sn || 'FlexBuy Seller'),
+    seller_color: getConversationColor(listing.sn || 'FlexBuy Seller'),
+    listing_emoji: listing.e || getListingEmoji(listing.cat),
+    listing_title: listing.t || 'Listing',
+    listing_price: Number(listing.p || 0),
+    listing_context: (listing.cond || 'Good') + ' · ' + (listing.loc || 'Toronto, ON'),
+    last_message: '',
+    last_message_at: new Date().toISOString()
+  };
+  var result = await client
+    .from('conversations')
+    .upsert(payload, { onConflict: 'buyer_id,listing_ref' })
+    .select('id')
+    .single();
+  if (result.error) {
+    toast(result.error.message || 'Could not open the conversation');
+    return null;
+  }
+  await loadRemoteConversations(result.data.id);
+  return result.data.id;
+}
+
+async function openProductConversation() {
+  if (!loggedIn) {
+    closeProd();
+    goScr('login');
+    toast('Please sign in to message sellers');
+    return;
+  }
+  var listing = curProdListing;
+  closeProd();
+  goScr('messages');
+  if (!listing) return;
+  var id = await ensureConversationForListing(listing);
+  if (id) openConv(id);
+}
 // ── PROFILE TABS ──────────────────────────────────────────────────────
 function swTab(el, n) {
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('act'); });
@@ -3243,6 +3551,8 @@ async function initAuth() {
     }
     loggedIn = false;
     currentUserEmail = '';
+    currentUserId = '';
+    remoteConversations = [];
     curUser = getDefaultProfile();
     renderProfile();
     syncAuthUI();
@@ -3254,6 +3564,7 @@ async function initAuth() {
 loadPrefs();
 initAuth();
 loadRemoteListings();
+loadRemoteConversations();
 renderGrid('all');
 renderSavedSearches();
 updateSearchSaveButton();
