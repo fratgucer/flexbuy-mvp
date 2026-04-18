@@ -27,6 +27,16 @@ create index if not exists listings_category_idx on public.listings (category);
 
 alter table public.listings enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant select on public.listings to anon;
+grant select, insert, update, delete on public.listings to authenticated;
+grant usage, select on sequence public.listings_id_seq to authenticated;
+
+drop policy if exists "public can read active listings" on public.listings;
+drop policy if exists "authenticated users can create their listings" on public.listings;
+drop policy if exists "owners can update their listings" on public.listings;
+drop policy if exists "owners can delete their listings" on public.listings;
+
 create policy "public can read active listings"
 on public.listings
 for select
@@ -50,3 +60,8 @@ on public.listings
 for delete
 to authenticated
 using (auth.uid() = owner_id);
+
+notify pgrst, 'reload schema';
+
+select 'listings ready' as status, count(*) as row_count
+from public.listings;

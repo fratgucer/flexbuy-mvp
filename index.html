@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FlexBuy — Buy local, pay over time</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="shortcut icon" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
@@ -62,8 +65,9 @@ body.dark{--tx:#f4f4ef;--mu:#aaa9a1;--br:#2a2a28;--sf:#151514;--bg:#0d0d0d;--pan
 .btn-help{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
 .btn-sell{background:none;border:1.5px solid var(--br);border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-family:inherit;}
 .btn-signin{background:var(--g);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
-.user-av{width:30px;height:30px;border-radius:50%;background:var(--g);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;}
+.user-av{width:30px;height:30px;border-radius:50%;background:var(--g);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;overflow:hidden;}
 .user-av.show{display:flex;}
+.user-av img,.pav2 img,.ep-avatar-preview img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;}
 .hbg{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:3px;margin-right:5px;}
 .hbg span{display:block;width:14px;height:1.5px;background:var(--tx);border-radius:2px;}
 
@@ -173,6 +177,7 @@ body.dark{--tx:#f4f4ef;--mu:#aaa9a1;--br:#2a2a28;--sf:#151514;--bg:#0d0d0d;--pan
 .login-btn{width:100%;background:var(--tx);color:#fff;border:none;border-radius:7px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
 .login-forgot{font-size:11px;color:var(--mu);text-align:center;margin-top:10px;cursor:pointer;text-decoration:underline;}
 .login-forgot:hover{color:var(--tx);}
+.login-hint{font-size:10px;color:var(--mu);margin-top:6px;line-height:1.45;}
 .login-terms{font-size:9px;color:var(--mu);text-align:center;margin-top:12px;line-height:1.6;}
 .login-terms a{color:var(--tx);cursor:pointer;text-decoration:underline;}
 .fr{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -353,6 +358,7 @@ body.dark{--tx:#f4f4ef;--mu:#aaa9a1;--br:#2a2a28;--sf:#151514;--bg:#0d0d0d;--pan
 .pcov::after{content:'';position:absolute;right:-14px;bottom:-14px;width:70px;height:70px;background:var(--g);border-radius:50%;opacity:.15;}
 .pavw{padding:0 14px;}
 .pav2{width:56px;height:56px;border-radius:50%;background:var(--g);border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-top:-28px;position:relative;}
+.pav2.has-photo{background:var(--panel-3);color:transparent;overflow:hidden;}
 .pvb{position:absolute;bottom:0;right:0;background:var(--g);color:#fff;border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-size:8px;border:2px solid #fff;}
 .pinf{padding:8px 14px 14px;}
 .pnm{font-size:14px;font-weight:800;letter-spacing:-.5px;margin-bottom:1px;}
@@ -557,6 +563,15 @@ input[type="number"].fi2::-webkit-inner-spin-button{-webkit-appearance:none;marg
 .sell-err.show{display:block;}
 .epbox{max-width:460px;overflow:visible;}
 .epgrid{display:flex;flex-direction:column;overflow:visible;}
+.ep-avatar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ep-avatar-input{display:none;}
+.ep-avatar-trigger{flex:1;display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--br);border-radius:14px;padding:12px;cursor:pointer;font-family:inherit;color:var(--tx);text-align:left;}
+.ep-avatar-preview{width:52px;height:52px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;overflow:hidden;}
+.ep-avatar-copy{min-width:0;}
+.ep-avatar-title{font-size:12px;font-weight:800;}
+.ep-avatar-meta{font-size:10px;color:var(--mu);margin-top:3px;line-height:1.45;}
+.ep-avatar-remove{border:1px solid var(--br);background:var(--panel);color:var(--mu);border-radius:10px;padding:11px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;}
+.ep-avatar-remove.hide{display:none;}
 .epbio{min-height:110px;resize:vertical;}
 .epactions{display:flex;gap:8px;margin-top:6px;}
 .epactions .bm,.epactions .bb{flex:1;}
@@ -728,6 +743,78 @@ body.dark .mapsa button{background:#171716;border-color:#2a2a28;color:#f4f4ef;}
 body.dark .map-locate-control{background:#171716;border-color:#2a2a28;color:#f4f4ef;}
 @media (max-width: 900px){
   .mapsa{top:auto;right:12px;bottom:16px;flex-direction:column;}
+}
+@media (max-width: 980px){
+  body{height:auto;min-height:100vh;overflow:auto;}
+  .topbar{height:auto;padding:10px 12px;align-items:flex-start;gap:10px;flex-wrap:wrap;position:sticky;top:0;background:var(--panel);}
+  .topbar > div:first-child{width:100%;flex-wrap:wrap;}
+  .topbar > div:first-child .sw{margin-left:0 !important;width:100%;order:2;}
+  .sw{flex-wrap:wrap;width:100%;}
+  .sw-wrap{width:100%;}
+  .tbr{width:100%;justify-content:flex-end;flex-wrap:wrap;}
+  .theme-btn,.btn-help{display:none;}
+  .body{display:block;overflow:visible;min-height:calc(100vh - 108px);}
+  .sb{position:fixed;top:0;left:0;bottom:0;width:min(82vw,300px);z-index:120;border-right:1px solid var(--br);box-shadow:0 20px 40px var(--shadow);padding-top:56px;transition:transform .2s ease,opacity .2s ease;overflow-y:auto;}
+  .sb.closed{width:min(82vw,300px);opacity:1;transform:translateX(-105%);}
+  .sbnav{padding-top:12px;}
+  .sbbot{position:sticky;bottom:0;background:var(--panel);}
+  .scr,.login-scr{min-height:calc(100vh - 108px);}
+  .pp,.saved-page,.bnpl-page,.pro-lay{padding:14px;}
+  .hero{padding:20px 18px;flex-direction:column;align-items:flex-start;gap:16px;}
+  .pills{width:100%;}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .map-lay,.msg-lay,.pro-lay{grid-template-columns:1fr;display:grid;overflow:visible;}
+  .mapsb,.msb{max-height:none;border-right:none;border-bottom:1px solid var(--br);}
+  .map-con{min-height:52vh;}
+  .map-list{max-height:240px;}
+  .cha{min-height:55vh;}
+  .prod-modal{grid-template-columns:1fr;max-height:92vh;}
+  .prod-left{border-radius:14px 14px 0 0;}
+  .prod-right{padding:16px;}
+  .prod-loc-card{grid-template-columns:1fr;}
+  .prod-loc-map{height:160px;}
+  .prod-area-modal{width:min(96vw,760px);}
+  .prod-area-map{height:300px;}
+  .bnpl-cards{grid-template-columns:1fr;}
+  .lg2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .offer-wrap,.sell-wrap,.prod-overlay,.ai-modal,.prod-area-overlay{padding:10px;}
+  .sbox,.ofmbox,.ai-box{max-height:92vh;}
+}
+@media (max-width: 640px){
+  .topbar{padding:10px;}
+  .topbar > div:first-child{gap:8px;}
+  .logo{font-size:14px;}
+  .btn-sell,.btn-signin,.search-btn{font-size:12px;padding:9px 12px;}
+  .search-btn{width:100%;}
+  .stats,.grid,.lg2,.bnpl-cards,.form-row2,.fr{grid-template-columns:1fr;}
+  .cats{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;}
+  .cat{flex:0 0 auto;}
+  .map-top-filters{left:10px;right:10px;}
+  .mapsa{right:10px;bottom:10px;}
+  .map-filter-chip,.map-locate-control,.mapsa button{font-size:11px;padding:9px 12px;}
+  .msg-lay{display:flex;flex-direction:column;}
+  .msb{max-height:40vh;}
+  .cvl{max-height:280px;}
+  .chh{align-items:flex-start;flex-wrap:wrap;}
+  .chac{margin-left:0;width:100%;justify-content:flex-start;}
+  .pr{flex-wrap:wrap;align-items:flex-start;}
+  .ofb{margin-left:0;width:100%;}
+  .msgs2{padding:10px;}
+  .msg2{max-width:92%;}
+  .chin{flex-wrap:wrap;}
+  .ciw,.och,.prod-buy,.prod-msg,.prod-save-btn,.ep-avatar-remove{width:100%;}
+  .sndb{width:42px;height:42px;}
+  .prod-img-big{min-height:200px;font-size:70px;}
+  .prod-thumb{width:48px;height:48px;}
+  .prod-badges{padding-right:34px;}
+  .prod-cta,.ep-avatar-row{flex-wrap:wrap;}
+  .sell-body{padding:14px;}
+  .upl-previews{grid-template-columns:repeat(3,1fr);}
+  .loc-picked-t{font-size:18px;white-space:normal;}
+  .loc-map-preview-in{height:180px;}
+  .ep-avatar-row{flex-direction:column;}
+  .saved-empty{padding:36px 16px;}
 }
 body.dark .leaflet-popup-content-wrapper,
 body.dark .leaflet-popup-tip{background:var(--panel);color:var(--tx);}
@@ -969,6 +1056,7 @@ body.dark .leaflet-container{background:#111;}
         <input class="fi" type="email" id="su-email" placeholder="you@email.com">
         <label class="fl">Password</label>
         <input class="fi" type="password" id="su-pass" placeholder="Min. 8 characters">
+        <div class="login-hint">Use at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 symbol.</div>
         <label class="fl">Location</label>
         <input class="fi" id="su-loc" placeholder="Brooklyn, NY">
         <button class="login-btn" onclick="doSignUp()">Create Account</button>
@@ -1407,9 +1495,20 @@ body.dark .leaflet-container{background:#111;}
       <button class="xb" onclick="closeEditProfile()">✕</button>
     </div>
     <div class="epgrid">
+      <input type="file" id="ep-avatar-input" class="ep-avatar-input" accept="image/*" onchange="handleProfilePhotoSelect(event)">
+      <div class="ep-avatar-row">
+        <button class="ep-avatar-trigger" type="button" onclick="triggerProfilePhotoPicker()">
+          <div class="ep-avatar-preview" id="ep-avatar-preview">JD</div>
+          <div class="ep-avatar-copy">
+            <div class="ep-avatar-title">Profile photo</div>
+            <div class="ep-avatar-meta" id="ep-avatar-meta">Add a clear photo so buyers can recognize you.</div>
+          </div>
+        </button>
+        <button class="ep-avatar-remove hide" type="button" id="ep-avatar-remove" onclick="removeProfilePhoto()">Remove</button>
+      </div>
       <div class="fgroup" style="margin-bottom:10px;">
         <label class="fl2">Full name</label>
-        <input class="fi2" id="ep-name" placeholder="Your full name">
+        <input class="fi2" id="ep-name" placeholder="Your full name" oninput="renderEditProfileAvatarPreview()">
       </div>
       <div class="fgroup" style="margin-bottom:10px;">
         <label class="fl2">Username</label>
@@ -1484,14 +1583,15 @@ var AI_RESP = {
 // ── STATE ──────────────────────────────────────────────────────────────
 function getDefaultProfile() {
   return {
-    name: 'John Doe',
-    initials: 'JD',
-    username: 'johndoe',
-    memberSince: '2024',
-    bio: 'Selling quality second-hand items in NYC.',
-    location: 'Brooklyn, New York',
-    reply: 'Replies in < 1 hour',
-    verified: 'Identity verified'
+    name: 'FlexBuy Guest',
+    initials: 'FB',
+    username: 'guest',
+    memberSince: String(new Date().getFullYear()),
+    bio: 'Sign in to personalize your profile and start buying or selling on FlexBuy.',
+    location: 'Choose your city after signing in',
+    avatarUrl: '',
+    reply: 'Sign in to message buyers and sellers',
+    verified: 'Not signed in'
   };
 }
 
@@ -1515,6 +1615,8 @@ var curProdImages = [];
 var savedSearches = [];
 var currentSearchQuery = '';
 var currentTheme = 'light';
+var profileAvatarStore = {};
+var profileAvatarDraft = '';
 var sellLocSelection = null;
 var sellLocResults = [];
 var sellLocTimer = null;
@@ -1558,8 +1660,22 @@ var supabaseClient = window.supabase && window.supabase.createClient
     })
   : null;
 
+var homeCategoryMap = {
+  electronics: ['phones', 'laptops', 'audio', 'cameras', 'gaming'],
+  furniture: ['furniture'],
+  sports: ['fitness', 'outdoor', 'sports'],
+  clothing: ['mens', 'womens', 'shoes', 'bags'],
+  vehicles: ['cars', 'motorcycles', 'bicycles', 'scooters']
+};
+
 function getAllListings() {
   return remoteListings.concat(DATA);
+}
+
+function matchesListingFilter(item, filter) {
+  if (!filter || filter === 'all') return true;
+  if (item.cat === filter) return true;
+  return (homeCategoryMap[filter] || []).indexOf(item.cat) > -1;
 }
 
 function getListingEmoji(cat) {
@@ -1649,7 +1765,9 @@ function persistPrefs() {
   try {
     localStorage.setItem('flexbuy-theme', currentTheme);
     localStorage.setItem('flexbuy-saved-searches', JSON.stringify(savedSearches));
-    localStorage.setItem('flexbuy-user-profile', JSON.stringify(curUser));
+    localStorage.setItem('flexbuy-profile-avatars', JSON.stringify(profileAvatarStore));
+    if (loggedIn) localStorage.setItem('flexbuy-user-profile', JSON.stringify(curUser));
+    else localStorage.removeItem('flexbuy-user-profile');
   } catch (e) {}
 }
 
@@ -1669,9 +1787,10 @@ function loadPrefs() {
   try {
     var storedTheme = localStorage.getItem('flexbuy-theme');
     var storedSearches = JSON.parse(localStorage.getItem('flexbuy-saved-searches') || '[]');
-    var storedUser = JSON.parse(localStorage.getItem('flexbuy-user-profile') || 'null');
     if (Array.isArray(storedSearches)) savedSearches = storedSearches;
-    if (storedUser && typeof storedUser === 'object') curUser = Object.assign(getDefaultProfile(), storedUser);
+    var storedAvatars = JSON.parse(localStorage.getItem('flexbuy-profile-avatars') || '{}');
+    if (storedAvatars && typeof storedAvatars === 'object') profileAvatarStore = storedAvatars;
+    curUser = getDefaultProfile();
     loggedIn = false;
     currentUserEmail = '';
     applyTheme(storedTheme || 'light');
@@ -1684,8 +1803,24 @@ function loadPrefs() {
   }
 }
 
+function initResponsiveChrome() {
+  var sb = document.getElementById('sb');
+  if (!sb) return;
+  if (window.innerWidth <= 980) {
+    sbOpen = false;
+    sb.classList.add('closed');
+    return;
+  }
+  sbOpen = true;
+  sb.classList.remove('closed');
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────────────
 function goScr(name, arg) {
+  if (!loggedIn && (name === 'messages' || name === 'profile')) {
+    toast(name === 'messages' ? 'Please sign in to view messages' : 'Please sign in to view your profile');
+    name = 'login';
+  }
   if (name === 'bnpl') { renderBNPL(arg); }
   document.querySelectorAll('.scr, .login-scr').forEach(function(s){ s.classList.remove('act'); });
   var el = document.getElementById('scr-' + name);
@@ -1697,6 +1832,10 @@ function goScr(name, arg) {
   if (name === 'messages') initMsgs();
   if (name === 'map') initNearMap();
   if (name === 'saved') { renderSaved(); renderSavedSearches(); }
+  if (window.innerWidth <= 980) {
+    sbOpen = false;
+    document.getElementById('sb').classList.add('closed');
+  }
 }
 
 function toggleSb() {
@@ -1718,7 +1857,7 @@ function filterAndGo(cat, label) {
   document.getElementById('grid-title').textContent = label;
   document.getElementById('grid-clear').textContent = 'Clear ×';
   document.getElementById('grid-clear').onclick = clearFilter;
-  var res = getAllListings().filter(function(d){ return d.cat === cat; });
+  var res = getAllListings().filter(function(d){ return matchesListingFilter(d, cat); });
   if (res.length === 0) {
     document.getElementById('grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu);"><div style="font-size:36px;margin-bottom:10px;">📭</div><div style="font-size:14px;font-weight:700;margin-bottom:4px;">No listings in this category yet</div></div>';
   } else {
@@ -1728,7 +1867,7 @@ function filterAndGo(cat, label) {
 
 // ── HOME GRID ─────────────────────────────────────────────────────────
 function renderGrid(filter) {
-  var items = filter === 'all' ? getAllListings() : getAllListings().filter(function(d){ return d.cat === filter; });
+  var items = getAllListings().filter(function(d){ return matchesListingFilter(d, filter); });
   renderCards(items);
 }
 
@@ -2056,9 +2195,29 @@ function buildProfileFromSupabase(user, profile) {
     memberSince: (profile && profile.created_at ? String(new Date(profile.created_at).getFullYear()) : String(new Date().getFullYear())),
     bio: (profile && profile.bio) || getMetadataValue(metadata, ['bio']) || 'Buying and selling great second-hand finds on FlexBuy.',
     location: (profile && profile.location) || getMetadataValue(metadata, ['location', 'city']) || 'Toronto, ON',
+    avatarUrl: getStoredProfileAvatar(user && user.email),
     reply: 'Replies in < 1 hour',
     verified: 'Email account connected'
   };
+}
+
+function getStoredProfileAvatar(email) {
+  var key = normalizeEmail(email);
+  return key ? (profileAvatarStore[key] || '') : '';
+}
+
+function setStoredProfileAvatar(email, avatarUrl) {
+  var key = normalizeEmail(email);
+  if (!key) return;
+  if (avatarUrl) profileAvatarStore[key] = avatarUrl;
+  else delete profileAvatarStore[key];
+}
+
+function buildAvatarMarkup(avatarUrl, initials, badgeHtml, altText) {
+  if (avatarUrl) {
+    return '<img src="' + avatarUrl + '" alt="' + escapeHtml(altText || 'Profile photo') + '">' + (badgeHtml || '');
+  }
+  return escapeHtml(initials || 'FB') + (badgeHtml || '');
 }
 
 async function ensureProfileRow(user, overrides) {
@@ -2213,6 +2372,15 @@ function doAppleLogin()  {
   startOAuthLogin('apple');
 }
 
+function isStrongPassword(pass) {
+  return typeof pass === 'string'
+    && pass.length >= 8
+    && /[a-z]/.test(pass)
+    && /[A-Z]/.test(pass)
+    && /\d/.test(pass)
+    && /[^A-Za-z0-9]/.test(pass);
+}
+
 async function doSignIn() {
   var email = normalizeEmail(document.getElementById('signin-email').value);
   var pass  = document.getElementById('signin-pass').value;
@@ -2235,7 +2403,10 @@ async function doSignUp() {
   var loc   = document.getElementById('su-loc').value.trim();
   if (!first || !last) { toast('Please enter your name'); return; }
   if (!email) { toast('Please enter your email'); return; }
-  if (!pass || pass.length < 8) { toast('Password must be at least 8 characters'); return; }
+  if (!isStrongPassword(pass)) {
+    toast('Password needs 8+ chars with uppercase, lowercase, number, and symbol');
+    return;
+  }
   if (!loc) { toast('Please enter your location'); return; }
   var client = getSupabaseClient();
   if (!client) return;
@@ -2298,7 +2469,7 @@ function syncAuthUI() {
   if (!signInBtn || !av) return;
   signInBtn.style.display = loggedIn ? 'none' : '';
   av.classList.toggle('show', loggedIn);
-  av.textContent = curUser.initials;
+  av.innerHTML = buildAvatarMarkup(curUser.avatarUrl, curUser.initials, '', curUser.name + ' avatar');
 }
 
 function renderProfileListings() {
@@ -2330,7 +2501,10 @@ function renderProfile() {
   if (pl) pl.textContent = curUser.location;
   if (pr) pr.textContent = curUser.reply;
   if (pv) pv.textContent = curUser.verified;
-  if (pav) pav.innerHTML = curUser.initials + '<div class="pvb">✓</div>';
+  if (pav) {
+    pav.classList.toggle('has-photo', !!curUser.avatarUrl);
+    pav.innerHTML = buildAvatarMarkup(curUser.avatarUrl, curUser.initials, '<div class="pvb">✓</div>', curUser.name + ' profile photo');
+  }
 }
 
 function setLoggedIn(name, initials) {
@@ -2375,10 +2549,12 @@ function openEditProfile() {
     return;
   }
   profileLocSelection = {label: curUser.location, display: curUser.location};
+  profileAvatarDraft = curUser.avatarUrl || '';
   document.getElementById('ep-name').value = curUser.name;
   document.getElementById('ep-username').value = curUser.username;
   document.getElementById('ep-location').value = curUser.location;
   document.getElementById('ep-bio').value = curUser.bio;
+  renderEditProfileAvatarPreview();
   var err = document.getElementById('ep-err');
   err.textContent = '';
   err.classList.remove('show');
@@ -2388,6 +2564,81 @@ function openEditProfile() {
 function closeEditProfile() {
   document.getElementById('edit-profile-wrap').classList.remove('open');
   hideProfileLocationSuggestions();
+}
+
+function triggerProfilePhotoPicker() {
+  var input = document.getElementById('ep-avatar-input');
+  if (input) input.click();
+}
+
+function renderEditProfileAvatarPreview() {
+  var preview = document.getElementById('ep-avatar-preview');
+  var meta = document.getElementById('ep-avatar-meta');
+  var removeBtn = document.getElementById('ep-avatar-remove');
+  var sourceName = document.getElementById('ep-name') ? document.getElementById('ep-name').value.trim() : '';
+  if (!preview || !meta || !removeBtn) return;
+  if (profileAvatarDraft) {
+    preview.innerHTML = '<img src="' + profileAvatarDraft + '" alt="Profile photo preview">';
+    meta.textContent = 'Tap to replace your current photo.';
+    removeBtn.classList.remove('hide');
+    return;
+  }
+  preview.textContent = makeInitials(sourceName || curUser.name);
+  meta.textContent = 'Add a clear photo so buyers can recognize you.';
+  removeBtn.classList.add('hide');
+}
+
+function resizeProfilePhoto(file) {
+  return new Promise(function(resolve, reject){
+    if (!file) { reject(new Error('No photo selected')); return; }
+    if (!/^image\\//.test(file.type || '')) { reject(new Error('Please choose an image file')); return; }
+    var reader = new FileReader();
+    reader.onerror = function(){ reject(new Error('Could not read that image')); };
+    reader.onload = function(evt){
+      var img = new Image();
+      img.onerror = function(){ reject(new Error('Could not process that image')); };
+      img.onload = function(){
+        var side = Math.min(img.width, img.height);
+        var sx = Math.max(0, (img.width - side) / 2);
+        var sy = Math.max(0, (img.height - side) / 2);
+        var canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 320;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f4f4ef';
+        ctx.fillRect(0, 0, 320, 320);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, 320, 320);
+        resolve(canvas.toDataURL('image/jpeg', 0.86));
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleProfilePhotoSelect(event) {
+  var err = document.getElementById('ep-err');
+  var file = event.target && event.target.files ? event.target.files[0] : null;
+  if (!file) return;
+  try {
+    profileAvatarDraft = await resizeProfilePhoto(file);
+    renderEditProfileAvatarPreview();
+    if (err) {
+      err.textContent = '';
+      err.classList.remove('show');
+    }
+  } catch (e) {
+    if (err) {
+      err.textContent = e.message || 'Could not use that photo';
+      err.classList.add('show');
+    }
+  }
+  event.target.value = '';
+}
+
+function removeProfilePhoto() {
+  profileAvatarDraft = '';
+  renderEditProfileAvatarPreview();
 }
 
 async function saveEditProfile() {
@@ -2421,7 +2672,8 @@ async function saveEditProfile() {
     initials: makeInitials(name),
     username: username,
     location: (profileLocSelection && profileLocSelection.display) || location,
-    bio: bio || getDefaultProfile().bio
+    bio: bio || getDefaultProfile().bio,
+    avatarUrl: profileAvatarDraft || ''
   });
   var client = getSupabaseClient();
   if (!client) return;
@@ -2442,7 +2694,10 @@ async function saveEditProfile() {
     err.classList.add('show');
     return;
   }
-  curUser = Object.assign({}, curUser, buildProfileFromSupabase(auth.data.user, profileSave.data));
+  curUser = Object.assign({}, curUser, buildProfileFromSupabase(auth.data.user, profileSave.data), {
+    avatarUrl: profileAvatarDraft || ''
+  });
+  setStoredProfileAvatar(auth.data.user.email, curUser.avatarUrl);
   renderProfile();
   renderProfileListings();
   syncAuthUI();
@@ -3615,6 +3870,7 @@ async function initAuth() {
 
 // ── INIT ───────────────────────────────────────────────────────────────
 loadPrefs();
+initResponsiveChrome();
 initAuth();
 loadRemoteListings();
 loadRemoteConversations();
@@ -3665,6 +3921,7 @@ if (editProfileWrap) {
     if (event.target === editProfileWrap) closeEditProfile();
   });
 }
+window.addEventListener('resize', initResponsiveChrome);
 updateMapChipState();
 </script>
 </body>
